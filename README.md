@@ -39,10 +39,3 @@ Here's a list of the workflows currently available in this repository:
 
 To get a quick visual understanding of any workflow, simply open the `Screenshot_*.png` file located within its respective workflow folder.
 
-## Contributing
-
-Feel free to add your own n8n workflows to this repository! Please ensure that:
-
-1.  Each workflow is in its own clearly named folder.
-2.  The folder contains both the `.json` workflow definition and a screenshot.
-3.  You provide a brief description of your workflow in the `Workflows` section of this `README.md`.
