@@ -1,5 +1,5 @@
 {
-  "name": "YouTube Weekly Digest",
+  "name": "YouTube Weekly Digest (API Version)",
   "nodes": [
     {
       "id": "Cron",
@@ -25,57 +25,79 @@
     },
     {
       "id": "NetworkChuck",
-      "name": "NetworkChuck RSS",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
+      "name": "NetworkChuck",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
       "position": [
         520,
         120
       ],
       "parameters": {
-        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9x0an7uG3p6f0ews3tF0Yw",
-        "responseFormat": "xml"
+        "resource": "playlistItem",
+        "operation": "getAll",
+        "playlistId": "={{ \"UUOuGATIAbd2DvzJmUgXn2IQ\" }}",
+        "limit": 10
+      },
+      "credentials": {
+        "youTubeApi": {
+          "id": "YOUR_CREDENTIAL_ID_HERE"
+        }
       }
     },
     {
       "id": "ChristianLempa",
-      "name": "Christian Lempa RSS",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
+      "name": "Christian Lempa",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
       "position": [
         520,
         300
       ],
       "parameters": {
-        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCV8pGcNQcS_F_8bN3p6XV1Q",
-        "responseFormat": "xml"
+        "resource": "playlistItem",
+        "operation": "getAll",
+        "playlistId": "={{ \"UUdSo-S0iMgFlfNln5qeUo0A\" }}",
+        "limit": 10
+      },
+      "credentials": {
+        "youTubeApi": {
+          "id": "YOUR_CREDENTIAL_ID_HERE"
+        }
       }
     },
     {
       "id": "ChrisTitusTech",
-      "name": "Chris Titus Tech RSS",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
+      "name": "Chris Titus Tech",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
       "position": [
         520,
         480
       ],
       "parameters": {
-        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCg6gPGh8HU2U01vaFCAsvmQ",
-        "responseFormat": "xml"
+        "resource": "playlistItem",
+        "operation": "getAll",
+        "playlistId": "={{ \"UUg6gPGh8HU2U01vaFCAsvmQ\" }}",
+        "limit": 10
+      },
+      "credentials": {
+        "youTubeApi": {
+          "id": "YOUR_CREDENTIAL_ID_HERE"
+        }
       }
     },
     {
-      "id": "MergeFeeds",
-      "name": "Merge Feeds",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "id": "Merge",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
       "position": [
-        760,
+        800,
         300
       ],
       "parameters": {
-        "functionCode": "return items.flat();"
+        "mode": "append",
+        "numberInputs": 3
       }
     },
     {
@@ -89,9 +111,9 @@
       ],
       "parameters": {
         "conditions": {
-          "string": [
+          "number": [
             {
-              "value1": "={{ new Date($json[\"published\"]).getTime() }}",
+              "value1": "={{ new Date($json.snippet.publishedAt).getTime() }}",
               "operation": "larger",
               "value2": "={{ Date.now() - 7*24*60*60*1000 }}"
             }
@@ -100,32 +122,38 @@
       }
     },
     {
-      "id": "MarkdownBuilder",
-      "name": "Build Markdown",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "id": "Code",
+      "name": "Build HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        1240,
+        1200,
         300
       ],
       "parameters": {
-        "functionCode": "const videos = items.map(i => i.json);\nlet md = `# 🎥 Nieuwe video's van deze week\n\nHier zijn de nieuwste video's van **NetworkChuck**, **Christian Lempa** en **Chris Titus Tech**.\n\n---\n\n`;\n\nvideos.forEach(v => {\n  md += `### [${v.title}](${v.link})\n📅 Gepubliceerd: ${v.published}\n\n${v[\"media:group\"]?.[\"media:description\"]?.[0] ?? \"\"}\n\n---\n`;\n});\n\nreturn [{ json: { markdown: md } }];"
+        "jsCode": "const videos = items.map(i => i.json);\nlet html = `\n<div style=\"font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;\">\n  <h1 style=\"color: #c4302b; border-bottom: 2px solid #c4302b; padding-bottom: 10px;\">🎥 Nieuwe video's van deze week</h1>\n  <p>Hier zijn de nieuwste video's van <strong>NetworkChuck</strong>, <strong>Christian Lempa</strong> en <strong>Chris Titus Tech</strong>.</p>\n  <br>\n`;\n\nvideos.forEach(v => {\n  const snippet = v.snippet;\n  const title = snippet.title;\n  const videoId = snippet.resourceId.videoId;\n  const link = `https://www.youtube.com/watch?v=${videoId}`;\n  const published = new Date(snippet.publishedAt).toLocaleDateString('nl-NL');\n  const desc = snippet.description.split('\\n')[0];\n  const thumbnail = snippet.thumbnails?.medium?.url || '';\n\n  html += `\n  <div style=\"margin-bottom: 25px; padding-bottom: 25px; border-bottom: 1px solid #eee; display: flex; gap: 15px;\">\n    <a href=\"${link}\" style=\"flex-shrink: 0;\">\n      <img src=\"${thumbnail}\" alt=\"${title}\" style=\"width: 160px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n    </a>\n    <div>\n      <h3 style=\"margin: 0 0 5px;\"><a href=\"${link}\" style=\"text-decoration: none; color: #2c3e50;\">${title}</a></h3>\n      <p style=\"margin: 0 0 8px; font-size: 0.85em; color: #7f8c8d;\">📅 ${published}</p>\n      <p style=\"margin: 0; font-size: 0.95em; line-height: 1.4;\">${desc}</p>\n    </div>\n  </div>\n  `;\n});\n\nhtml += `\n  <p style=\"text-align: center; font-size: 0.8em; color: #999; margin-top: 30px;\">\n    Automatisch gegenereerd door n8n\n  </p>\n</div>`;\n\nreturn [{ json: { html: html } }];"
       }
     },
     {
-      "id": "Email",
-      "name": "Send Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2,
+      "id": "Gmail",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
       "position": [
-        1500,
+        1400,
         300
       ],
       "parameters": {
-        "fromEmail": "your@email.com",
-        "toEmail": "your@email.com",
+        "resource": "message",
+        "operation": "send",
         "subject": "Nieuwe YouTube video's deze week",
-        "text": "={{ $json.markdown }}"
+        "message": "={{ $json.html }}",
+        "toEmail": "your@email.com"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID_HERE"
+        }
       }
     }
   ],
@@ -155,7 +183,7 @@
       "main": [
         [
           {
-            "node": "MergeFeeds",
+            "node": "Merge",
             "type": "main",
             "index": 0
           }
@@ -166,9 +194,9 @@
       "main": [
         [
           {
-            "node": "MergeFeeds",
+            "node": "Merge",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]
@@ -177,14 +205,14 @@
       "main": [
         [
           {
-            "node": "MergeFeeds",
+            "node": "Merge",
             "type": "main",
-            "index": 0
+            "index": 2
           }
         ]
       ]
     },
-    "MergeFeeds": {
+    "Merge": {
       "main": [
         [
           {
@@ -199,18 +227,18 @@
       "main": [
         [
           {
-            "node": "MarkdownBuilder",
+            "node": "Code",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "MarkdownBuilder": {
+    "Code": {
       "main": [
         [
           {
-            "node": "Email",
+            "node": "Gmail",
             "type": "main",
             "index": 0
           }
