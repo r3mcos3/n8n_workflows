@@ -3,7 +3,7 @@
 This folder contains the n8n workflow definition and its corresponding screenshot for the YouTube Digest Workflow.
 
 ## Workflow Description
-[Add a brief description of what this workflow does here.]
+This workflow automates the process of creating a digest or summary of new YouTube videos from specified channels or playlists.
 
 ## Screenshot
 ![YouTube Digest Workflow Screenshot](./youtube_digest_workflow.png)
