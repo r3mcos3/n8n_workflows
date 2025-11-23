@@ -2,22 +2,21 @@
   "name": "YouTube Weekly Digest (API Version)",
   "nodes": [
     {
-      "id": "Cron",
-      "name": "Cron",
-      "type": "n8n-nodes-base.cron",
-      "typeVersion": 1,
+      "id": "Schedule",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
       "position": [
         260,
         300
       ],
       "parameters": {
-        "triggerTimes": {
-          "item": [
+        "rule": {
+          "interval": [
             {
-              "mode": "weekly",
-              "weekDay": "sunday",
-              "hour": 9,
-              "minute": 0
+              "field": "days",
+              "hour": 23,
+              "minute": 59
             }
           ]
         }
@@ -131,7 +130,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const videos = items.map(i => i.json);\nlet html = `\n<div style=\"font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;\">\n  <h1 style=\"color: #c4302b; border-bottom: 2px solid #c4302b; padding-bottom: 10px;\">🎥 Nieuwe video's van deze week</h1>\n  <p>Hier zijn de nieuwste video's van <strong>NetworkChuck</strong>, <strong>Christian Lempa</strong> en <strong>Chris Titus Tech</strong>.</p>\n  <br>\n`;\n\nvideos.forEach(v => {\n  const snippet = v.snippet;\n  const title = snippet.title;\n  const videoId = snippet.resourceId.videoId;\n  const link = `https://www.youtube.com/watch?v=${videoId}`;\n  const published = new Date(snippet.publishedAt).toLocaleDateString('nl-NL');\n  const desc = snippet.description.split('\\n')[0];\n  const thumbnail = snippet.thumbnails?.medium?.url || '';\n\n  html += `\n  <div style=\"margin-bottom: 25px; padding-bottom: 25px; border-bottom: 1px solid #eee; display: flex; gap: 15px;\">\n    <a href=\"${link}\" style=\"flex-shrink: 0;\">\n      <img src=\"${thumbnail}\" alt=\"${title}\" style=\"width: 160px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n    </a>\n    <div>\n      <h3 style=\"margin: 0 0 5px;\"><a href=\"${link}\" style=\"text-decoration: none; color: #2c3e50;\">${title}</a></h3>\n      <p style=\"margin: 0 0 8px; font-size: 0.85em; color: #7f8c8d;\">📅 ${published}</p>\n      <p style=\"margin: 0; font-size: 0.95em; line-height: 1.4;\">${desc}</p>\n    </div>\n  </div>\n  `;\n});\n\nhtml += `\n  <p style=\"text-align: center; font-size: 0.8em; color: #999; margin-top: 30px;\">\n    Automatisch gegenereerd door n8n\n  </p>\n</div>`;\n\nreturn [{ json: { html: html } }];"
+        "jsCode": "const videos = items.map(i => i.json);\nlet html = `\n<div style=\"font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;\">\n  <h1 style=\"color: #c4302b; border-bottom: 2px solid #c4302b; padding-bottom: 10px;\">🎥 Nieuwe video's van deze week</h1>\n  <p>Hier zijn de nieuwste video's van <strong>NetworkChuck</strong>, <strong>Christian Lempa</strong> en <strong>Chris Titus Tech</strong>.</p>\n  <br>\n`;\n\nvideos.forEach(v => {\n  const snippet = v.snippet;\n  const title = snippet.title;\n  const videoId = snippet.resourceId.videoId;\n  const link = `https://www.youtube.com/watch?v=${videoId}`;\n  const published = new Date(snippet.publishedAt).toLocaleDateString('nl-NL');\n  const desc = snippet.description.split('\\n')[0];\n  const thumbnail = snippet.thumbnails?.medium?.url || '';\n\n  html += `\n  <div style=\"margin-bottom: 25px; padding-bottom: 25px; border-bottom: 1px solid #eee; display: flex; align-items: flex-start;\">\n    <a href=\"${link}\" style=\"flex-shrink: 0; margin-right: 30px;\">\n      <img src=\"${thumbnail}\" alt=\"${title}\" style=\"width: 160px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: block;\">\n    </a>\n    <div>\n      <h3 style=\"margin: 0 0 5px;\"><a href=\"${link}\" style=\"text-decoration: none; color: #2c3e50;\">${title}</a></h3>\n      <p style=\"margin: 0 0 8px; font-size: 0.85em; color: #7f8c8d;\">📅 ${published}</p>\n      <p style=\"margin: 0; font-size: 0.95em; line-height: 1.4;\">${desc}</p>\n    </div>\n  </div>\n  `;\n});\n\nhtml += `\n  <p style=\"text-align: center; font-size: 0.8em; color: #999; margin-top: 30px;\">\n    Automatisch gegenereerd door n8n\n  </p>\n</div>`;\n\nreturn [{ json: { html: html } }];"
       }
     },
     {
@@ -158,7 +157,7 @@
     }
   ],
   "connections": {
-    "Cron": {
+    "Schedule": {
       "main": [
         [
           {
