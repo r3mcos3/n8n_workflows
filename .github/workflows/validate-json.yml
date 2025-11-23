@@ -1,0 +1,30 @@
+name: Validate JSON Workflow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.json'
+
+jobs:
+  validate-json:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate JSON files
+        run: |
+          find . -name "*.json" | while read file; do
+            echo "Validating $file..."
+            jq . "$file" > /dev/null
+            if [ $? -ne 0 ]; then
+              echo "JSON validation failed for $file"
+              exit 1
+            fi
+            echo "Validation successful for $file"
+          done
