@@ -1,0 +1,221 @@
+{
+  "name": "YouTube Weekly Digest",
+  "nodes": [
+    {
+      "id": "Cron",
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        260,
+        300
+      ],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "weekly",
+              "weekDay": "sunday",
+              "hour": 9,
+              "minute": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "NetworkChuck",
+      "name": "NetworkChuck RSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        520,
+        120
+      ],
+      "parameters": {
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9x0an7uG3p6f0ews3tF0Yw",
+        "responseFormat": "xml"
+      }
+    },
+    {
+      "id": "ChristianLempa",
+      "name": "Christian Lempa RSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        520,
+        300
+      ],
+      "parameters": {
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCV8pGcNQcS_F_8bN3p6XV1Q",
+        "responseFormat": "xml"
+      }
+    },
+    {
+      "id": "ChrisTitusTech",
+      "name": "Chris Titus Tech RSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        520,
+        480
+      ],
+      "parameters": {
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCg6gPGh8HU2U01vaFCAsvmQ",
+        "responseFormat": "xml"
+      }
+    },
+    {
+      "id": "MergeFeeds",
+      "name": "Merge Feeds",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "functionCode": "return items.flat();"
+      }
+    },
+    {
+      "id": "FilterNew",
+      "name": "Filter New Videos",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ new Date($json[\"published\"]).getTime() }}",
+              "operation": "larger",
+              "value2": "={{ Date.now() - 7*24*60*60*1000 }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "MarkdownBuilder",
+      "name": "Build Markdown",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        300
+      ],
+      "parameters": {
+        "functionCode": "const videos = items.map(i => i.json);\nlet md = `# 🎥 Nieuwe video's van deze week\n\nHier zijn de nieuwste video's van **NetworkChuck**, **Christian Lempa** en **Chris Titus Tech**.\n\n---\n\n`;\n\nvideos.forEach(v => {\n  md += `### [${v.title}](${v.link})\n📅 Gepubliceerd: ${v.published}\n\n${v[\"media:group\"]?.[\"media:description\"]?.[0] ?? \"\"}\n\n---\n`;\n});\n\nreturn [{ json: { markdown: md } }];"
+      }
+    },
+    {
+      "id": "Email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        300
+      ],
+      "parameters": {
+        "fromEmail": "your@email.com",
+        "toEmail": "your@email.com",
+        "subject": "Nieuwe YouTube video's deze week",
+        "text": "={{ $json.markdown }}"
+      }
+    }
+  ],
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "NetworkChuck",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ChristianLempa",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ChrisTitusTech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NetworkChuck": {
+      "main": [
+        [
+          {
+            "node": "MergeFeeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ChristianLempa": {
+      "main": [
+        [
+          {
+            "node": "MergeFeeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ChrisTitusTech": {
+      "main": [
+        [
+          {
+            "node": "MergeFeeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MergeFeeds": {
+      "main": [
+        [
+          {
+            "node": "FilterNew",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FilterNew": {
+      "main": [
+        [
+          {
+            "node": "MarkdownBuilder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MarkdownBuilder": {
+      "main": [
+        [
+          {
+            "node": "Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
