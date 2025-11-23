@@ -4,24 +4,28 @@ This repository serves as a collection of various [n8n](https://n8n.io/) workflo
 
 ## Structure
 
-Each workflow resides in its own directory, named after the workflow. Inside each directory, you will find:
+Each workflow resides in its own dedicated folder. Inside each workflow folder, you will find:
 
 - `workflow_name.json`: The n8n workflow definition in JSON format.
-- `Screenshot_DATE_TIME.png`: A screenshot of the workflow for visual overview.
+- `README.md`: A description of the workflow, including an embedded screenshot.
+
+All workflow screenshots are centrally stored in the hidden `.pictures/` directory at the repository root.
 
 Example:
 ```
 .
+├── .pictures/
+│   └── youtube_digest_workflow.png
 └── youtube_digest_workflow/
-    ├── Screenshot_2025-11-23_17-36-58.png
+    ├── README.md
     └── youtube_digest_workflow.json
 ```
 
 ## Workflows
 
-Here's a list of the workflows currently available in this repository:
+Here's a list of the workflows currently available in this repository. Click on the workflow's folder and open its `README.md` for details and screenshots.
 
-- **YouTube Digest Workflow**: A workflow designed to [brief description of what the workflow does, e.g., create a digest of new YouTube videos].
+- **YouTube Digest Workflow**: (Details and screenshot available in `youtube_digest_workflow/README.md`)
 
 ## How to Use
 
@@ -35,7 +39,7 @@ Here's a list of the workflows currently available in this repository:
 6.  Paste the copied JSON content into the import dialog.
 7.  Click "Import" to add the workflow to your n8n instance.
 
-### Viewing Screenshots
+### Viewing Workflow Details and Screenshots
 
-To get a quick visual understanding of any workflow, simply open the `Screenshot_*.png` file located within its respective workflow folder.
+To get a visual understanding and detailed description of any workflow, navigate to its dedicated folder (e.g., `youtube_digest_workflow/`) and open the `README.md` file located there. The screenshot will be embedded directly in that file.
 
