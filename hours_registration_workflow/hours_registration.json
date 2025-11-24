@@ -1,0 +1,116 @@
+{
+    "name": "Hours Registration Workflow",
+    "nodes": [
+        {
+            "parameters": {
+                "formTitle": "Hours Registration",
+                "formDescription": "Enter your worked hours for today.",
+                "formFields": {
+                    "values": [
+                        {
+                            "fieldLabel": "Date",
+                            "fieldType": "date",
+                            "requiredField": true
+                        },
+                        {
+                            "fieldLabel": "Week Number",
+                            "fieldType": "number",
+                            "requiredField": true
+                        },
+                        {
+                            "fieldLabel": "Start Time",
+                            "fieldType": "text",
+                            "requiredField": true,
+                            "placeholder": "09:00"
+                        },
+                        {
+                            "fieldLabel": "End Time",
+                            "fieldType": "text",
+                            "requiredField": true,
+                            "placeholder": "17:00"
+                        },
+                        {
+                            "fieldLabel": "Break in minutes",
+                            "fieldType": "number",
+                            "requiredField": false,
+                            "defaultValue": 30
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.formTrigger",
+            "typeVersion": 2.1,
+            "position": [
+                0,
+                0
+            ],
+            "id": "2d1f3c4e-5b6a-4d7e-8f9c-0a1b2c3d4e5f",
+            "name": "Hours Form"
+        },
+        {
+            "parameters": {
+                "jsCode": "const start = $input.item.json['Start Time'];\nconst end = $input.item.json['End Time'];\nconst breakMins = $input.item.json['Break in minutes'] || 0;\n\nfunction toMinutes(timeStr) {\n  const [h, m] = timeStr.split(':').map(Number);\n  return h * 60 + m;\n}\n\nfunction toTimeStr(mins) {\n  const h = Math.floor(mins / 60);\n  const m = mins % 60;\n  return `${h}:${m.toString().padStart(2, '0')}`;\n}\n\nconst startMins = toMinutes(start);\nconst endMins = toMinutes(end);\n\nlet diffMins = endMins - startMins;\nif (diffMins < 0) diffMins += 24 * 60; // Handle overnight\n\nconst netMins = diffMins - breakMins;\n\nreturn {\n  json: {\n    ...$input.item.json,\n    'Total Duration': toTimeStr(diffMins),\n    'Worked Hours': toTimeStr(netMins)\n  }\n};"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                220,
+                0
+            ],
+            "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+            "name": "Calculate Hours"
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "sheetId": {
+                    "__rl": true,
+                    "value": "",
+                    "mode": "list",
+                    "cachedResultName": ""
+                },
+                "range": "A:G",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                440,
+                0
+            ],
+            "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+            "name": "Google Sheets",
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "",
+                    "name": ""
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Hours Form": {
+            "main": [
+                [
+                    {
+                        "node": "Calculate Hours",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Calculate Hours": {
+            "main": [
+                [
+                    {
+                        "node": "Google Sheets",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
