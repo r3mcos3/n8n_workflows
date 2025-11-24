@@ -7,5 +7,6 @@ This workflow automates the process of creating a digest or summary of new YouTu
 
 ## Screenshots
 ![YouTube Digest Workflow Screenshot](../.pictures/youtube_digest_workflow.png)
+<br>
 ![YouTube Digest Workflow Screenshot](../.pictures/youtube_digest_workflow1.png)
 
