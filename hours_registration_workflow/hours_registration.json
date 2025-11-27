@@ -15,7 +15,8 @@
                         {
                             "fieldLabel": "Week Number",
                             "fieldType": "number",
-                            "requiredField": true
+                            "requiredField": false,
+                            "placeholder": "Enter week number on monday"
                         },
                         {
                             "fieldLabel": "Start Time",
@@ -32,8 +33,7 @@
                         {
                             "fieldLabel": "Break in minutes",
                             "fieldType": "number",
-                            "requiredField": false,
-                            "defaultValue": 30
+                            "requiredField": false
                         }
                     ]
                 },
@@ -87,6 +87,94 @@
                     "name": ""
                 }
             }
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "weeks",
+                            "triggerAtDay": [
+                                0
+                            ],
+                            "triggerAtHour": 18
+                        }
+                    ]
+                }
+            },
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                0,
+                300
+            ],
+            "id": "schedule-trigger-id",
+            "name": "Weekly Schedule"
+        },
+        {
+            "parameters": {
+                "operation": "read",
+                "sheetId": {
+                    "__rl": true,
+                    "value": "",
+                    "mode": "list",
+                    "cachedResultName": ""
+                },
+                "range": "A:G",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                220,
+                300
+            ],
+            "id": "get-sheet-data-id",
+            "name": "Get Sheet Data",
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "",
+                    "name": ""
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const rows = $input.all();\nconst now = new Date();\n// Calculate start of the week (Monday) - assuming run on Sunday evening\nconst startOfWeek = new Date(now);\nstartOfWeek.setDate(now.getDate() - 6);\nstartOfWeek.setHours(0,0,0,0);\n\nconst endOfWeek = new Date(now);\nendOfWeek.setHours(23,59,59,999);\n\nlet weeklyTotalMins = 0;\nconst dailyTotals = {};\n\nfunction timeStrToMins(str) {\n  if (!str) return 0;\n  const [h, m] = str.split(':').map(Number);\n  return h * 60 + m;\n}\n\nfunction minsToTimeStr(mins) {\n  const h = Math.floor(mins / 60);\n  const m = mins % 60;\n  return `${h}:${m.toString().padStart(2, '0')}`;\n}\n\nfor (const row of rows) {\n  const item = row.json;\n  if (!item.Date) continue;\n  const itemDate = new Date(item.Date);\n  \n  // Check if date is valid and within range\n  if (itemDate >= startOfWeek && itemDate <= endOfWeek) {\n    const workedMins = timeStrToMins(item['Worked Hours']);\n    weeklyTotalMins += workedMins;\n    \n    const dayName = itemDate.toLocaleDateString('nl-NL', { weekday: 'long' });\n    dailyTotals[dayName] = (dailyTotals[dayName] || 0) + workedMins;\n  }\n}\n\nconst weekNum = getWeekNumber(now);\nlet message = `<h3>Urenregistratie Overzicht - Week ${weekNum}</h3><ul>`;\nfor (const [day, mins] of Object.entries(dailyTotals)) {\n  message += `<li><strong>${day}:</strong> ${minsToTimeStr(mins)} uur</li>`;\n}\nmessage += '</ul>';\nmessage += `<p><strong>Totaal deze week:</strong> ${minsToTimeStr(weeklyTotalMins)} uur</p>`;\n\nreturn { json: { emailBody: message, subject: `Urenoverzicht Week ${weekNum}` } };\n\nfunction getWeekNumber(d) {\n    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));\n    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));\n    var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));\n    var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);\n    return weekNo;\n}"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                440,
+                300
+            ],
+            "id": "calc-stats-id",
+            "name": "Calculate Weekly Stats"
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "subject": "={{ $json.subject }}",
+                "message": "={{ $json.emailBody }}",
+                "toEmail": "remco@example.com",
+                "options": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                660,
+                300
+            ],
+            "id": "send-email-id",
+            "name": "Send Email",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "",
+                    "name": ""
+                }
+            }
         }
     ],
     "connections": {
@@ -106,6 +194,39 @@
                 [
                     {
                         "node": "Google Sheets",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Weekly Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "Get Sheet Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Sheet Data": {
+            "main": [
+                [
+                    {
+                        "node": "Calculate Weekly Stats",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Calculate Weekly Stats": {
+            "main": [
+                [
+                    {
+                        "node": "Send Email",
                         "type": "main",
                         "index": 0
                     }
