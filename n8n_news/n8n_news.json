@@ -1,0 +1,157 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "weeks",
+                            "triggerAtDay": [
+                                6
+                            ],
+                            "triggerAtHour": 8
+                        }
+                    ]
+                }
+            },
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.3,
+            "position": [
+                -208,
+                -48
+            ],
+            "id": "b33c0c0a-12a9-4e4f-9b72-31c3db99611b",
+            "name": "Schedule Trigger"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "256bbe4e-6f2a-467d-b4ad-eeaab7d4f0fe",
+                            "name": "n8n_news",
+                            "value": "latest news about n8n",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                32,
+                -48
+            ],
+            "id": "85755bd1-78a7-4e75-93e0-ce912bca0940",
+            "name": "Edit Fields"
+        },
+        {
+            "parameters": {
+                "query": "={{ $json.n8n_news }}",
+                "options": {}
+            },
+            "type": "@tavily/n8n-nodes-tavily.tavily",
+            "typeVersion": 1,
+            "position": [
+                288,
+                -48
+            ],
+            "id": "da352d90-94f7-4f02-b5ee-239fcb93d937",
+            "name": "Search",
+            "credentials": {
+                "tavilyApi": {
+                    "id": "CkC5XJlgZ8CeNj1S",
+                    "name": "Tavily account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "sendTo": "example@gmail.com",
+                "subject": "=Latest n8n News ({{$now.toFormat(\"dd-MM-yyyy\")}})",
+                "message": "={{ $json.html }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                848,
+                -48
+            ],
+            "id": "0b350198-d6d5-4c6f-8a69-21708662e188",
+            "name": "Send a message",
+            "webhookId": "8102d8e6-f48a-415d-a98f-b5694bd8e0ad",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "C44c4LvCJi0RDzZh",
+                    "name": "Gmail account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// 1. Retrieve the array of raw results from the Tavily Node.\n// This uses your correct expression to get the 'results' array.\nconst rawResults = $input.first().json.results;\nconst articles = [];\n\n// First we structure the data to the expected fields (title, snippet, url)\n// We use a for-loop to bypass bugs in .forEach.\nif (Array.isArray(rawResults)) {\n    for (const item of rawResults) {\n        // Filter results with an extremely low score (like the 0.064 from earlier)\n        if (item.score === undefined || item.score > 0.1) {\n            articles.push({\n                title: item.title,\n                snippet: item.content || \"No summary available.\",\n                url: item.url\n            });\n        }\n    }\n}\n\n// 2. Start the HTML string with the basic structure and styles\nlet html = `\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Weekly n8n Newsletter</title>\n    <style>\n        /* CSS for the email */\n        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; line-height: 1.6; }\n        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border-radius: 8px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); }\n        .header { background-color: #6d6dff; color: white; padding: 25px 20px 20px; text-align: center; border-radius: 8px 8px 0 0; }\n        .header h1 { margin-top: 0; font-size: 26px; font-weight: 700; }\n        .header p { opacity: 0.8; margin: 5px 0 0; }\n        .content { padding: 20px; }\n        .article { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eeeeee; border-left: 4px solid #b7b7ff; padding-left: 15px; }\n        .article:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }\n        .article h3 { color: #2c3e50; margin: 0 0 8px; font-size: 18px; font-weight: 600; }\n        .article p { color: #555555; font-size: 14px; margin: 0 0 10px; }\n        .article a { color: #6d6dff; text-decoration: none; font-weight: bold; font-size: 14px; }\n        .footer { text-align: center; padding: 15px 20px; font-size: 12px; color: #999999; border-top: 1px dashed #dddddd; margin-top: 20px; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <h1>🤖 Weekly n8n Newsletter</h1>\n            <p>The latest news of this week, delivered automatically</p>\n        </div>\n        \n        <div class=\"content\">\n`;\n\n// 3. Loop through the (now correctly structured) articles and add the HTML\nif (articles.length > 0) {\n    for (const article of articles) {\n        // Use the unique data of each article\n        const title = article.title;\n        const snippet = article.snippet;\n        const url = article.url;\n\n        html += `\n        <div class=\"article\">\n            <h3 style=\"margin-top: 0;\">${title}</h3>\n            <p>${snippet}</p>\n            <p><a href=\"${url}\" target=\"_blank\" style=\"color: #6d6dff; text-decoration: none; font-weight: bold;\">Read the full article &raquo;</a></p>\n        </div>\n        `;\n    }\n} else {\n    // No articles found\n    html += `\n    <p style=\"text-align: center; padding: 40px; color: #888;\">\n        Unfortunately, no important or relevant news about n8n was found this week.\n    </p>\n    `;\n}\n\n// 4. Close the HTML tags\nhtml += `\n        </div>\n        <div class=\"footer\">\n            <p>This email is automated via an n8n workflow.</p>\n        </div>\n    </div>\n</body>\n</html>\n`;\n\n// 5. Return the HTML string\nreturn [{ json: { html: html } }];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                544,
+                -48
+            ],
+            "id": "17642dc9-b900-4d6c-ae0d-b45dbfdb97e6",
+            "name": "Code in JavaScript1"
+        }
+    ],
+    "connections": {
+        "Schedule Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Edit Fields",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Edit Fields": {
+            "main": [
+                [
+                    {
+                        "node": "Search",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Search": {
+            "main": [
+                [
+                    {
+                        "node": "Code in JavaScript1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Code in JavaScript1": {
+            "main": [
+                [
+                    {
+                        "node": "Send a message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "5d66ab3126afa36d376cdea3f01a6fbf70f658e8adff144f2ef6ed6414bdc8d5"
+    }
+}
