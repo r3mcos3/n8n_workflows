@@ -29,6 +29,10 @@ To use this workflow, you need the following credentials configured in n8n:
 *   **Recipient Email**: Update the `sendTo` field in the "Send a message" node to your desired email address.
 *   **Search Query**: You can modify the search query in the "Edit Fields" node if you want to track different topics.
 
+## Screenshots
+
+![n8n_weekly_news_workflow](../.pictures/n8n_weekly_news_workflow.png)
+
 ## License
 
 This project is licensed under the terms of the MIT license.
