@@ -1,0 +1,270 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "uren",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                -1840,
+                -272
+            ],
+            "id": "7bb0b349-bd65-40b5-862c-9b9a3e0077b6",
+            "name": "Uren",
+            "webhookId": "2aa96d77-cf43-4d43-8c8f-f5eca7178127"
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "mail",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                -1856,
+                0
+            ],
+            "id": "9b10e04b-33b6-4fa1-bee1-f1d99ec6d303",
+            "name": "Mail",
+            "webhookId": "38935816-bb19-4c7b-ad2e-d8fa4a627c51"
+        },
+        {
+            "parameters": {
+                "dataTableId": {
+                    "__rl": true,
+                    "value": "CkJxtiFWlLSswRza",
+                    "mode": "list",
+                    "cachedResultName": "Uren Registratie",
+                    "cachedResultUrl": "/projects/yxV3FEKRoZ04xol2/datatables/CkJxtiFWlLSswRza"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "date": "={{ $json.body.Date }}",
+                        "starttime": "={{ $json.body['Start Time'] }}",
+                        "endtime": "={{ $json.body['End Time'] }}",
+                        "break_in_minutes": "={{ $json.body['Break in minutes'] }}",
+                        "weeknumber": "={{ $json.body['Week Number'] }}",
+                        "notes": "={{ $json.body.Notes }}"
+                    },
+                    "matchingColumns": [],
+                    "schema": [
+                        {
+                            "id": "date",
+                            "displayName": "date",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        },
+                        {
+                            "id": "starttime",
+                            "displayName": "starttime",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        },
+                        {
+                            "id": "endtime",
+                            "displayName": "endtime",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        },
+                        {
+                            "id": "break_in_minutes",
+                            "displayName": "break_in_minutes",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        },
+                        {
+                            "id": "weeknumber",
+                            "displayName": "weeknumber",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        },
+                        {
+                            "id": "notes",
+                            "displayName": "notes",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": false
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.dataTable",
+            "typeVersion": 1,
+            "position": [
+                -1328,
+                -256
+            ],
+            "id": "dda4264a-5017-4ff5-b9fe-bd176af9fa7c",
+            "name": "Insert row"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Dit script berekent de bruto en netto gewerkte uren op basis van de input van de vorige node (Webhook).\n\nfor (const item of items) {\n  // Haal de benodigde waarden uit de 'body' van het inkomende item\n  const date = item.json.body.Date; \n  const startTimeStr = item.json.body['Start Time'];\n  const endTimeStr = item.json.body['End Time'];\n  const breakMinutes = item.json.body['Break in minutes'];\n  \n  // Combineer datum en tijd om geldige Date-objecten te maken\n  // De 'Z' maakt het UTC-tijd. Dit voorkomt problemen met lokale tijdzones.\n  const startTime = new Date(`${date}T${startTimeStr}:00.000Z`);\n  const endTime = new Date(`${date}T${endTimeStr}:00.000Z`);\n  \n  // Functie om uren als HH:MM te formatteren\n  const formatHours = (hours) => {\n    if (isNaN(hours) || hours < 0) return '0:00';\n    const totalMinutes = Math.round(hours * 60);\n    const h = Math.floor(totalMinutes / 60);\n    const m = totalMinutes % 60;\n    // Zorg ervoor dat minuten twee cijfers hebben (08 i.p.v. 8)\n    return `${h}:${m.toString().padStart(2, '0')}`;\n  };\n\n  // 1. Bereken het totale tijdsverschil in milliseconden\n  const totalDurationMs = endTime.getTime() - startTime.getTime();\n  \n  // 2. Converteer milliseconden naar uren (totaal gewerkte tijd inclusief pauze)\n  const totalHoursRaw = totalDurationMs / (1000 * 60 * 60);\n  \n  // 3. Trek de pauzetijd in uren af van de totale uren\n  const breakHours = breakMinutes / 60;\n  const workedHoursMinusBreak = totalHoursRaw - breakHours;\n  \n  // 4. Voeg de resultaten toe aan het 'body' object van het item\n  item.json.body.Total_Hours_Gross_Raw = totalHoursRaw;\n  item.json.body.Total_Hours_Gross_HHMM = formatHours(totalHoursRaw);\n  item.json.body.Worked_Hours_Net_Raw = workedHoursMinusBreak;\n  item.json.body.Worked_Hours_Net_HHMM = formatHours(workedHoursMinusBreak);\n}\n\nreturn items;"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -1568,
+                -256
+            ],
+            "id": "ee5224f1-c429-429e-b23a-fe4ad7f2b7f5",
+            "name": "Code in JavaScript"
+        },
+        {
+            "parameters": {
+                "operation": "get",
+                "dataTableId": {
+                    "__rl": true,
+                    "value": "CkJxtiFWlLSswRza",
+                    "mode": "list",
+                    "cachedResultName": "Uren Registratie",
+                    "cachedResultUrl": "/projects/yxV3FEKRoZ04xol2/datatables/CkJxtiFWlLSswRza"
+                }
+            },
+            "type": "n8n-nodes-base.dataTable",
+            "typeVersion": 1,
+            "position": [
+                -1600,
+                0
+            ],
+            "id": "4a6bf036-d7c0-44de-b8f0-8d10d226cd38",
+            "name": "Get row(s)"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Input data ophalen\nconst items = $input.all();\n\n// Helper: datum omzetten naar dd-MM-yyyy\nfunction formatDate(d) {\n  const date = new Date(d);\n  const dd = String(date.getDate()).padStart(2, \"0\");\n  const mm = String(date.getMonth() + 1).padStart(2, \"0\");\n  const yyyy = date.getFullYear();\n  return `${dd}-${mm}-${yyyy}`;\n}\n\n// Weeknummer\nconst week = items[0].json.weeknumber;\n\n// Datums bepalen voor in het onderwerp\nconst rawDates = items.map(i => new Date(i.json.date));\nrawDates.sort((a,b) => a - b);\n\nconst startDate = formatDate(rawDates[0]);\nconst endDate = formatDate(rawDates[rawDates.length - 1]);\n\n// Subject genereren\nconst subject = `Urenoverzicht week ${week} (${startDate} t/m ${endDate})`;\n\n// Functie uren berekenen\nfunction calculateHours(start, end, breakMin) {\n  const [sh, sm] = start.split(\":\").map(Number);\n  const [eh, em] = end.split(\":\").map(Number);\n  const breakHours = (Number(breakMin) || 0) / 60;\n\n  const startDate = new Date(2000, 0, 1, sh, sm);\n  const endDate = new Date(2000, 0, 1, eh, em);\n  const diff = (endDate - startDate) / 1000 / 3600;\n\n  return diff - breakHours;\n}\n\n// HTML header\nlet html = `\n<div style=\"font-family: Arial, sans-serif; color:#333; max-width:700px; margin:auto;\">\n  <h1 style=\"text-align:center; color:#2c3e50; margin-bottom:25px;\">\n    Urenoverzicht – Week ${week}\n  </h1>\n\n  <p style=\"font-size:15px;\">\n    Hieronder vind je het overzicht van de gewerkte uren voor week ${week} (${startDate} t/m ${endDate}).\n  </p>\n\n  <table style=\"border-collapse: collapse; width:100%; margin-top:20px;\">\n    <thead>\n      <tr style=\"background:#34495e; color:white;\">\n        <th style=\"padding:10px; border:1px solid #ddd;\">Datum</th>\n        <th style=\"padding:10px; border:1px solid #ddd;\">Start</th>\n        <th style=\"padding:10px; border:1px solid #ddd;\">Einde</th>\n        <th style=\"padding:10px; border:1px solid #ddd;\">Pauze</th>\n        <th style=\"padding:10px; border:1px solid #ddd;\">Uren</th>\n        <th style=\"padding:10px; border:1px solid #ddd;\">Notities</th>\n      </tr>\n    </thead>\n    <tbody>\n`;\n\nlet totalHours = 0;\n\n// Rijen genereren\nitems.forEach((item, idx) => {\n  const d = item.json;\n  const hours = calculateHours(d.starttime, d.endtime, d.break_in_minutes);\n  totalHours += hours;\n\n  html += `\n    <tr style=\"background:${idx % 2 === 0 ? \"#f8f9fa\" : \"#ffffff\"};\">\n      <td style=\"padding:8px; border:1px solid #ddd;\">${formatDate(d.date)}</td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">${d.starttime}</td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">${d.endtime}</td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">${d.break_in_minutes || 0} min</td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">${hours.toFixed(2)}</td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">${d.notes || \"\"}</td>\n    </tr>\n  `;\n});\n\nhtml += `\n    </tbody>\n  </table>\n\n  <div style=\"\n    margin-top:25px;\n    padding:15px;\n    background:#ecf0f1;\n    border-left:5px solid #3498db;\n    font-size:16px;\n  \">\n    <strong>Totaal gewerkte uren:</strong> ${totalHours.toFixed(2)} uur\n  </div>\n\n  <p style=\"margin-top:30px; font-size:14px; color:#555;\">\n    Automatisch gegenereerd urenoverzicht.\n  </p>\n</div>\n`;\n\nreturn [\n  {\n    json: {\n      week,\n      subject,\n      html\n    }\n  }\n];\n"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -1328,
+                0
+            ],
+            "id": "ce258211-6319-4411-9102-09a063db7434",
+            "name": "Code in JavaScript1"
+        },
+        {
+            "parameters": {
+                "sendTo": "r3mcos3@gmail.com",
+                "subject": "={{ $json.subject }}",
+                "message": "={{ $json.html }}",
+                "options": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                -1088,
+                0
+            ],
+            "id": "bde66649-6981-4da2-96c2-13782656aae6",
+            "name": "Send a message",
+            "webhookId": "0dd408e8-70c6-4420-884f-96d2bc5cf093",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "C44c4LvCJi0RDzZh",
+                    "name": "Gmail account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Uren": {
+            "main": [
+                [
+                    {
+                        "node": "Code in JavaScript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Mail": {
+            "main": [
+                [
+                    {
+                        "node": "Get row(s)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Insert row": {
+            "main": [
+                []
+            ]
+        },
+        "Code in JavaScript": {
+            "main": [
+                [
+                    {
+                        "node": "Insert row",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get row(s)": {
+            "main": [
+                [
+                    {
+                        "node": "Code in JavaScript1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Code in JavaScript1": {
+            "main": [
+                [
+                    {
+                        "node": "Send a message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "5d66ab3126afa36d376cdea3f01a6fbf70f658e8adff144f2ef6ed6414bdc8d5"
+    }
+}
