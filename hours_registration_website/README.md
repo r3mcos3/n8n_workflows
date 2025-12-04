@@ -8,6 +8,10 @@ This n8n workflow provides a complete hours registration system with two main fu
 
 The workflow accepts hours registration data through a webhook, calculates worked hours (both gross and net after breaks), stores the data in an n8n data table, and can generate weekly HTML email reports summarizing all registered hours.
 
+## Screenshots
+
+![Hours Registration Website](../.pictures/hours_registration_website.png)
+
 ## Features
 
 ### 1. Hours Registration Endpoint (`/uren`)
