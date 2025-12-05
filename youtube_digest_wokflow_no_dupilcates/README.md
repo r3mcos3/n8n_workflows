@@ -141,6 +141,15 @@ The email contains for each video:
 7. (Optional) Modify the YouTube channel IDs
 8. Activate the workflow
 
+## Screenshots
+
+<img width="841" height="486" alt="Screenshot 2025-12-05 220656" src="https://github.com/user-attachments/assets/e7153160-4fdf-4e69-871a-310a4eeddbdd" />
+<br>
+<img width="1185" height="632" alt="Screenshot 2025-12-05 220623" src="https://github.com/user-attachments/assets/6902f4f3-0b88-4a7c-b041-cf102a8ae154" />
+<br>
+<img width="1739" height="351" alt="Screenshot 2025-12-05 220543" src="https://github.com/user-attachments/assets/76aa4ed3-c018-4a37-8e94-2b322cfdb766" />
+
+
 ## License
 
 This is an open-source n8n workflow for personal use.
