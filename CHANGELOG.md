@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - 📝 Add CHANGELOG.md to track project changes
 
+### Removed
+- 🗑️ Remove .pictures directory
+
 ## [2024-12-01]
 
 ### Added
