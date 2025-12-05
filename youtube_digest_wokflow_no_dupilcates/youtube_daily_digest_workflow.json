@@ -1,0 +1,473 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 */6 * * *"
+                        }
+                    ]
+                }
+            },
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.3,
+            "position": [
+                -2112,
+                192
+            ],
+            "id": "acf54ab4-3930-4d8b-b423-46173f4fb3e5",
+            "name": "Schedule Trigger"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "channel-ids",
+                            "name": "channelids",
+                            "value": "[\"UCoy6cTJ7Tg0dqS-DI-_REsA\", \"UCg6gPGh8HU2U01vaFCAsvmQ\", \"UCZNhwA1B5YqiY1nLzmM0ZRg\", \"UC9x0AN7BWHpCDHSm9NiJFJQ\", \"UC2ojq-nuP8ceeHqiroeKhBA\", \"UCiHVTkJtWSdc9N3h0nUGWLg\", \"UC8F7X90NDmMr1mGx8897r_A\"]",
+                            "type": "array"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -1920,
+                192
+            ],
+            "id": "f340944f-7d8e-4ed7-bc42-1f03920509b5",
+            "name": "Channel IDs"
+        },
+        {
+            "parameters": {
+                "fieldToSplitOut": "channelids",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.splitOut",
+            "typeVersion": 1,
+            "position": [
+                -1712,
+                192
+            ],
+            "id": "6e8a9938-b82e-4a72-99fb-9d2b894a9eb6",
+            "name": "Split Out"
+        },
+        {
+            "parameters": {
+                "url": "=https://www.youtube.com/feeds/videos.xml?channel_id={{ $json.channelids }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.rssFeedRead",
+            "typeVersion": 1.2,
+            "position": [
+                -1520,
+                192
+            ],
+            "id": "ec178b01-59de-4e97-8181-fbe053b7e011",
+            "name": "RSS Read"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "loose",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "date-filter",
+                            "leftValue": "={{ new Date($json.isoDate).getTime() }}",
+                            "rightValue": "={{ new Date().getTime() - (7 * 24 * 60 * 60 * 1000) }}",
+                            "operator": {
+                                "type": "number",
+                                "operation": "gte"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "looseTypeValidation": true,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.filter",
+            "typeVersion": 2.2,
+            "position": [
+                -1312,
+                192
+            ],
+            "id": "56d2b7ff-e913-4656-9023-042dd01dfe49",
+            "name": "Filter Laatste 7 Dagen"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Sla de gefilterde videos op zodat we ze later kunnen gebruiken\nconst videos = $input.all();\nconsole.log('📹 Aantal gefilterde videos:', videos.length);\n\n// Geef de videos door + een marker dat we klaar zijn\nreturn videos.map(item => ({\n  json: {\n    ...item.json,\n    _isVideo: true\n  }\n}));"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -1120,
+                192
+            ],
+            "id": "3191d0a8-93c2-4220-b950-16d96fe0cc1f",
+            "name": "Store Videos"
+        },
+        {
+            "parameters": {
+                "documentId": {
+                    "__rl": true,
+                    "value": "https://docs.google.com/spreadsheets/d/16WmOAHB99b2UK9sw3Kt-1joTIZ12pmE-T1kj8bisdqc/edit",
+                    "mode": "url"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=0",
+                    "mode": "list",
+                    "cachedResultName": "Blad1",
+                    "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16WmOAHB99b2UK9sw3Kt-1joTIZ12pmE-T1kj8bisdqc/edit#gid=0"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                -912,
+                192
+            ],
+            "id": "9ea05561-10a9-4c6f-ac15-dbd78c479165",
+            "name": "Read Sent Videos",
+            "executeOnce": true,
+            "alwaysOutputData": true,
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "f1UEiOwMvVbqfStk",
+                    "name": "Google Sheets account"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "// ═══════════════════════════════════════════════════════════\n// DEDUPE CHECK - Versie 6 (ROBUST)\n// Werkt met elke kolomstructuur door ALLE values te checken\n// ═══════════════════════════════════════════════════════════\n\nconsole.log('╔════════════════════════════════════════╗');\nconsole.log('║      DEDUPE CHECK v6 - ROBUST          ║');\nconsole.log('╚════════════════════════════════════════╝');\n\n// Helper functie om video ID te cleanen\nfunction cleanVideoId(id) {\n  if (!id) return null;\n  // Convert to string first\n  id = String(id);\n  if (id.startsWith('yt:video:')) {\n    return id.split(':').pop();\n  }\n  if (id.includes(':')) {\n    return id.split(':').pop();\n  }\n  return id;\n}\n\n// Helper: check of een string een YouTube video ID lijkt\nfunction looksLikeVideoId(str) {\n  if (!str || typeof str !== 'string') return false;\n  // YouTube video IDs zijn 11 karakters, alphanumeriek met - en _\n  return /^[a-zA-Z0-9_-]{11}$/.test(str);\n}\n\n// STAP 1: Haal de videos op van de Store Videos node\nlet videos = [];\ntry {\n  videos = $('Store Videos').all();\n  console.log('📹 Videos van Store Videos node:', videos.length);\n} catch (e) {\n  console.log('❌ Kon videos niet ophalen:', e.message);\n  return [{ json: { noNewVideos: true, error: 'Geen videos gevonden' } }];\n}\n\nif (videos.length === 0) {\n  console.log('⚠️ Geen videos om te verwerken');\n  return [{ json: { noNewVideos: true } }];\n}\n\n// STAP 2: Haal ALLE mogelijke video IDs uit de sheets data\n// We checken ELKE waarde in ELKE rij om video IDs te vinden\nconst sentIds = new Set();\nconst sheetsData = $input.all();\n\nconsole.log('📋 Sheets data items ontvangen:', sheetsData.length);\n\nfor (const item of sheetsData) {\n  const data = item.json;\n  if (!data) continue;\n  \n  // Loop door ALLE keys en values in dit object\n  for (const [key, value] of Object.entries(data)) {\n    // Skip row_number\n    if (key === 'row_number') continue;\n    \n    // Check of de KEY een video ID is (dit gebeurt als er geen headers zijn)\n    if (looksLikeVideoId(key)) {\n      sentIds.add(key);\n    }\n    \n    // Check of de VALUE een video ID is\n    if (typeof value === 'string' && looksLikeVideoId(value)) {\n      sentIds.add(value);\n    }\n    \n    // Check ook voor video_id kolom (als er wel headers zijn)\n    if (key === 'video_id' && value) {\n      const cleanId = cleanVideoId(value);\n      if (cleanId) sentIds.add(cleanId);\n    }\n  }\n}\n\nconsole.log('📋 Unieke verzonden IDs gevonden:', sentIds.size);\n\n// Debug: toon eerste 10 IDs\nif (sentIds.size > 0) {\n  console.log('IDs in set (eerste 10):');\n  let count = 0;\n  sentIds.forEach(id => {\n    if (count < 10) console.log('  -', id);\n    count++;\n  });\n  if (sentIds.size > 10) {\n    console.log('  ... en', sentIds.size - 10, 'meer');\n  }\n} else {\n  console.log('ℹ️ Geen eerder verzonden videos - alles is nieuw!');\n}\n\n// STAP 3: Filter nieuwe videos\nconst newVideos = [];\n\nconsole.log('');\nconsole.log('🔍 Checking videos...');\n\nfor (const item of videos) {\n  const videoData = item.json;\n  const videoId = cleanVideoId(videoData.id);\n  const title = (videoData.title || 'Geen titel').substring(0, 50);\n  \n  const isDuplicate = videoId ? sentIds.has(videoId) : false;\n  \n  console.log(`${isDuplicate ? '⏭️ SKIP' : '✅ NEW '} ${title}`);\n  console.log(`         ID: ${videoId}`);\n  \n  if (videoId && !isDuplicate) {\n    // Maak een clean copy zonder de _isVideo marker\n    const cleanData = { ...videoData };\n    delete cleanData._isVideo;\n    cleanData.videoId = videoId;\n    newVideos.push({ json: cleanData });\n  }\n}\n\nconsole.log('');\nconsole.log('═══════════════════════════════════════');\nconsole.log('📊 RESULTAAT:', newVideos.length, 'nieuwe videos van', videos.length, 'totaal');\nconsole.log('   Overgeslagen (duplicates):', videos.length - newVideos.length);\nconsole.log('═══════════════════════════════════════');\n\nif (newVideos.length === 0) {\n  return [{ json: { noNewVideos: true } }];\n}\n\nreturn newVideos;"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -720,
+                192
+            ],
+            "id": "6572e3cf-c5d2-48e6-b11e-d078f67b7463",
+            "name": "Dedupe Check"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "loose",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "has-new-videos",
+                            "leftValue": "={{ $json.noNewVideos }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "notEquals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "looseTypeValidation": true,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.filter",
+            "typeVersion": 2.2,
+            "position": [
+                -512,
+                192
+            ],
+            "id": "3259884b-d7a9-4cb7-a998-dd30902e7846",
+            "name": "Heeft Nieuwe Videos?"
+        },
+        {
+            "parameters": {
+                "jsCode": "// ═══════════════════════════════════════════════════════════\n// EMAIL GENERATOR\n// ═══════════════════════════════════════════════════════════\n\nconst videos = $input.all();\n\nconsole.log('📧 Email genereren voor', videos.length, 'videos');\n\nfunction formatIsoDate(isoDate) {\n  if (!isoDate) return 'Onbekende datum';\n  const datePart = isoDate.split('T')[0];\n  const parts = datePart.split('-');\n  return `${parts[2]}-${parts[1]}-${parts[0].substring(2)}`;\n}\n\nfunction getThumbnailUrl(videoData) {\n  const videoId = videoData.videoId || (videoData.id?.startsWith('yt:video:') ? videoData.id.split(':').pop() : null);\n  if (videoId) {\n    return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;\n  }\n  return 'https://via.placeholder.com/100x75.png?text=Video';\n}\n\nlet htmlListItems = '';\nconst videoIdsToLog = [];\n\nfor (const item of videos) {\n  const v = item.json;\n  const formattedDate = formatIsoDate(v.isoDate || v.pubDate);\n  const thumbnailUrl = getThumbnailUrl(v);\n  \n  htmlListItems += `\n    <li style=\"margin-bottom: 25px; border-left: 3px solid #f4b400; padding-left: 10px; overflow: auto;\">\n      <img src=\"${thumbnailUrl}\" alt=\"Thumbnail\" style=\"width: 100px; height: auto; float: left; margin-right: 15px; border-radius: 4px;\">\n      <div style=\"overflow: hidden;\">\n        <p style=\"margin: 0; line-height: 1.2;\">\n          <strong style=\"font-size: 16px;\">${v.title}</strong><br>\n          <span style=\"color: #666; font-size: 13px;\">Auteur: ${v.author} | Gepubliceerd: ${formattedDate}</span><br>\n          <a href=\"${v.link}\" style=\"color:#1a73e8; text-decoration:none; font-weight: bold;\">» Bekijk de video</a>\n        </p>\n      </div>\n    </li>`;\n  \n  videoIdsToLog.push({\n    video_id: v.videoId,\n    sent_date: new Date().toISOString().split('T')[0],\n    title: v.title || 'Onbekende titel',\n    channel: v.author || 'Onbekend kanaal'\n  });\n}\n\nconst mostRecentDate = formatIsoDate(videos[0]?.json?.isoDate);\nconst subject = `Nieuwe YouTube Video's (${videos.length} stuks) van ${mostRecentDate}`;\n\nconst finalHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Nieuwe YouTube-updates</title>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; background-color: #f7f7f7; padding: 20px; }\n    .container { max-width: 600px; margin: 0 auto; padding: 30px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }\n    h2 { color: #333; border-bottom: 2px solid #eeeeee; padding-bottom: 10px; }\n    ul { list-style: none; padding: 0; margin-top: 20px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <h2>Nieuwe YouTube Video's 🚀</h2>\n    <ul>${htmlListItems}</ul>\n  </div>\n</body>\n</html>`;\n\nconsole.log('✅ Email klaar:', subject);\n\nreturn [{ \n  json: { \n    emailSubject: subject, \n    htmlEmailBody: finalHtml,\n    videoIdsToLog: videoIdsToLog\n  } \n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -320,
+                192
+            ],
+            "id": "855db583-0330-457b-946e-f56934954351",
+            "name": "Generate Email"
+        },
+        {
+            "parameters": {
+                "sendTo": "r3mcos3@gmail.com",
+                "subject": "={{ $json.emailSubject }}",
+                "message": "={{ $json.htmlEmailBody }}",
+                "options": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2.1,
+            "position": [
+                -112,
+                96
+            ],
+            "id": "ad62592a-27df-4889-9bb2-3711885609fc",
+            "name": "Send Email",
+            "webhookId": "youtube-digest-email",
+            "credentials": {
+                "gmailOAuth2": {
+                    "id": "C44c4LvCJi0RDzZh",
+                    "name": "Gmail account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Prepare data voor Google Sheets\nconst videoLogs = $input.first().json.videoIdsToLog;\n\nif (!videoLogs || videoLogs.length === 0) {\n  return [];\n}\n\nreturn videoLogs.map(log => ({ json: log }));"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -112,
+                304
+            ],
+            "id": "ccb858d3-3e79-4df3-9cb9-78883224811c",
+            "name": "Prepare Sheets Data"
+        },
+        {
+            "parameters": {
+                "operation": "appendOrUpdate",
+                "documentId": {
+                    "__rl": true,
+                    "value": "16WmOAHB99b2UK9sw3Kt-1joTIZ12pmE-T1kj8bisdqc",
+                    "mode": "list",
+                    "cachedResultName": "Youtube Send Videos",
+                    "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16WmOAHB99b2UK9sw3Kt-1joTIZ12pmE-T1kj8bisdqc/edit?usp=drivesdk"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=0",
+                    "mode": "list",
+                    "cachedResultName": "Blad1",
+                    "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16WmOAHB99b2UK9sw3Kt-1joTIZ12pmE-T1kj8bisdqc/edit#gid=0"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "video_id": "={{ $json.video_id }}",
+                        "sent_date": "={{ $json.sent_date }}",
+                        "title": "={{ $json.title }}",
+                        "channel": "={{ $json.channel }}"
+                    },
+                    "matchingColumns": [
+                        "video_id"
+                    ],
+                    "schema": [
+                        {
+                            "id": "video_id",
+                            "displayName": "video_id",
+                            "required": false,
+                            "defaultMatch": true,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "sent_date",
+                            "displayName": "sent_date",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "title",
+                            "displayName": "title",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "channel",
+                            "displayName": "channel",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": false
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                96,
+                304
+            ],
+            "id": "ee20eb3a-4b0a-4ede-a6a7-fd7446e535ae",
+            "name": "Log Sent Videos",
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "f1UEiOwMvVbqfStk",
+                    "name": "Google Sheets account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Schedule Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Channel IDs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Channel IDs": {
+            "main": [
+                [
+                    {
+                        "node": "Split Out",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split Out": {
+            "main": [
+                [
+                    {
+                        "node": "RSS Read",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "RSS Read": {
+            "main": [
+                [
+                    {
+                        "node": "Filter Laatste 7 Dagen",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Filter Laatste 7 Dagen": {
+            "main": [
+                [
+                    {
+                        "node": "Store Videos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Store Videos": {
+            "main": [
+                [
+                    {
+                        "node": "Read Sent Videos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Read Sent Videos": {
+            "main": [
+                [
+                    {
+                        "node": "Dedupe Check",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Dedupe Check": {
+            "main": [
+                [
+                    {
+                        "node": "Heeft Nieuwe Videos?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Heeft Nieuwe Videos?": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Email": {
+            "main": [
+                [
+                    {
+                        "node": "Send Email",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Prepare Sheets Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Sheets Data": {
+            "main": [
+                [
+                    {
+                        "node": "Log Sent Videos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "5d66ab3126afa36d376cdea3f01a6fbf70f658e8adff144f2ef6ed6414bdc8d5"
+    }
+}
