@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - 📝 Add CHANGELOG.md to track project changes
+- 📺 Add YouTube Daily Digest workflow with duplicate detection
+- 📚 Add comprehensive README documentation for YouTube digest workflow
 
 ### Removed
 - 🗑️ Remove .pictures directory
