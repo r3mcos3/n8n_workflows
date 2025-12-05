@@ -31,7 +31,8 @@ To use this workflow, you need the following credentials configured in n8n:
 
 ## Screenshots
 
-![n8n_weekly_news_workflow](../.pictures/n8n_weekly_news_workflow.png)
+<img width="1498" height="398" alt="n8n_weekly_news_workflow" src="https://github.com/user-attachments/assets/dc74ded2-aa8c-47b4-b0d0-1a7b322633d0" />
+
 
 ## License
 
