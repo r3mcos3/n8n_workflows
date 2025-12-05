@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2025-12-05]
+
 ### Changed
 - 📅 Add year to email subject in hours registration workflow
 - 📅 Add year to email subject in hours registration website workflow
+
+### Added
+- 📝 Add CHANGELOG.md to track project changes
 
 ## [2024-12-01]
 
