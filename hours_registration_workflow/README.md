@@ -61,9 +61,12 @@ This directory contains an n8n workflow that allows you to easily register your 
 
 ## Screenshots
 
-![Hours Registration Workflow](../.pictures/hours_registration_workflow.png)
+<img width="1180" height="594" alt="hours_registration_workflow" src="https://github.com/user-attachments/assets/2f00d6da-1b40-40c3-a534-a4bc7b6a4821" />
 <br>
-![Hours Registration Form](../.pictures/hours_registration_workflow1.png)
+<img width="1405" height="586" alt="hours_registration_workflow1" src="https://github.com/user-attachments/assets/fb8b6a37-a96b-4c7f-bddb-c877825bcf09" />
 <br>
-![Hours Registration Form](../.pictures/hours_registration_workflow2.png)
+<img width="1542" height="376" alt="hours_registration_workflow2" src="https://github.com/user-attachments/assets/9707ee58-0d7b-4626-be30-5f3770cb74ef" />
+
+
+
 
