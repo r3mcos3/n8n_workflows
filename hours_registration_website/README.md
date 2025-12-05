@@ -10,7 +10,7 @@ The workflow accepts hours registration data through a webhook, calculates worke
 
 ## Screenshots
 
-![Hours Registration Website](../.pictures/hours_registration_website.png)
+<img width="1479" height="517" alt="hours_registration_website" src="https://github.com/user-attachments/assets/c4cbf5b9-ea91-41a7-8984-ffadbe2ec4b6" />
 
 ## Features
 
