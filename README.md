@@ -24,7 +24,7 @@ Here's a list of the workflows currently available in this repository. Click on 
 - **YouTube Digest Workflow (No Duplicates)**: Automated email digest with intelligent duplicate detection (`youtube_digest_wokflow_no_dupilcates/`)
 - **YouTube Digest Workflow**: Basic YouTube digest automation (`youtube_digest_workflow/`)
 - **Hours Registration Workflow**: Time tracking with Google Sheets integration (`hours_registration_workflow/`)
-- **Hours Registration Website**: Web-based hours registration (`hours_registration_website/`)
+- **Hours Registration Backend**: Backend workflow for hours registration (`hours_registration_backend/`)
 - **n8n News**: News aggregation workflow (`n8n_news/`)
 
 ## How to Use
