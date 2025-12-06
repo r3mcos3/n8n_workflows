@@ -1,4 +1,4 @@
-# Hours Registration Website Workflow
+# Hours Registration Backend Workflow
 
 This n8n workflow provides a complete hours registration system with two main functionalities:
 1. **Hours Registration**: Submit work hours via a webhook endpoint
