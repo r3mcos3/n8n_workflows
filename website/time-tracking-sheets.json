@@ -1,0 +1,491 @@
+{
+  "name": "Time Tracking - Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "time/week",
+        "httpMethod": "GET",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, DELETE, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-get-week",
+      "name": "Get Week Data",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "get-week"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Bereken week start en eind\nconst now = new Date();\nconst dayOfWeek = now.getDay();\nconst diff = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;\nconst monday = new Date(now);\nmonday.setDate(now.getDate() + diff);\nmonday.setHours(0, 0, 0, 0);\n\nconst sunday = new Date(monday);\nsunday.setDate(monday.getDate() + 6);\nsunday.setHours(23, 59, 59, 999);\n\nreturn [{\n  json: {\n    weekStart: monday.toISOString().split('T')[0],\n    weekEnd: sunday.toISOString().split('T')[0]\n  }\n}];"
+      },
+      "id": "calc-week",
+      "name": "Calculate Week",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Uren Registratie"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {
+          "rangeDefinition": "specifyRange",
+          "range": "A:F"
+        }
+      },
+      "id": "sheets-read",
+      "name": "Read Sheets Data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [680, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Filter data for current week and format response\nconst items = $input.all();\nconst weekStart = $('Calculate Week').item.json.weekStart;\nconst weekEnd = $('Calculate Week').item.json.weekEnd;\n\n// Convert dd-MM-yyyy to yyyy-MM-dd for comparison\nconst parseDate = (dateStr) => {\n  if (dateStr.includes('-')) {\n    const parts = dateStr.split('-');\n    if (parts[0].length === 2) {\n      // dd-MM-yyyy format\n      return `${parts[2]}-${parts[1]}-${parts[0]}`;\n    }\n  }\n  return dateStr; // already yyyy-MM-dd\n};\n\nconst weekData = items.filter(item => {\n  const date = parseDate(item.json.date);\n  return date >= weekStart && date <= weekEnd;\n});\n\n// Calculate total hours\nconst totalHours = weekData.reduce((sum, item) => {\n  return sum + parseFloat(item.json.total_worked_hours || 0);\n}, 0);\n\n// Calculate week number\nconst getWeekNumber = (date) => {\n  const d = new Date(date);\n  d.setHours(0, 0, 0, 0);\n  d.setDate(d.getDate() + 4 - (d.getDay() || 7));\n  const yearStart = new Date(d.getFullYear(), 0, 1);\n  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\n};\n\nconst weekNumber = getWeekNumber(new Date());\n\n// Format days\nconst formattedDays = weekData.map(item => ({\n  date: item.json.date,\n  start_time: item.json.start_time,\n  end_time: item.json.end_time,\n  break_minutes: parseInt(item.json.break_minutes || 0),\n  total_work_hours: parseFloat(item.json.total_worked_hours || 0),\n  notes: item.json.notes || ''\n}));\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      week_number: weekNumber,\n      start_date: weekStart,\n      end_date: weekEnd,\n      days: formattedDays,\n      total_hours: totalHours.toFixed(2)\n    }\n  }\n}];"
+      },
+      "id": "format-week-response",
+      "name": "Format Week Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-week",
+      "name": "Respond Week",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "path": "time/entry",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, DELETE, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-create",
+      "name": "Create Entry",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 520],
+      "webhookId": "create-entry"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Calculate worked hours\nconst allItems = $input.all();\nconst item = allItems[0];\nconst body = item.json.body;\n\n// Convert yyyy-MM-dd to dd-MM-yyyy\nconst formatDate = (dateStr) => {\n  const [year, month, day] = dateStr.split('-');\n  return `${day}-${month}-${year}`;\n};\n\nconst startTime = new Date(`${body.date}T${body.start_time}:00`);\nconst endTime = new Date(`${body.date}T${body.end_time}:00`);\nconst totalMinutes = (endTime - startTime) / 1000 / 60;\nconst workMinutes = totalMinutes - (parseInt(body.break_minutes) || 0);\nconst workHours = (workMinutes / 60).toFixed(2);\n\n// Return array of items\nreturn [{\n  json: {\n    date: formatDate(body.date),\n    start_time: body.start_time,\n    end_time: body.end_time,\n    break_minutes: parseInt(body.break_minutes) || 0,\n    total_worked_hours: parseFloat(workHours),\n    notes: body.notes || ''\n  }\n}];"
+      },
+      "id": "calc-hours",
+      "name": "Calculate Hours",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 520]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Uren Registratie"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "start_time": "={{ $json.start_time }}",
+            "end_time": "={{ $json.end_time }}",
+            "break_minutes": "={{ $json.break_minutes }}",
+            "total_worked_hours": "={{ $json.total_worked_hours }}",
+            "notes": "={{ $json.notes }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "sheets-create",
+      "name": "Add to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [680, 520],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{\n  json: {\n    success: true,\n    data: $input.first().json,\n    message: 'Uren succesvol toegevoegd'\n  }\n}];"
+      },
+      "id": "format-create-response",
+      "name": "Format Create Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 520]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-create",
+      "name": "Respond Create",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 520]
+    },
+    {
+      "parameters": {
+        "path": "time/entry/:id",
+        "httpMethod": ["DELETE", "OPTIONS"],
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, DELETE, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-delete",
+      "name": "Delete Entry",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 740],
+      "webhookId": "delete-entry"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Get date from URL parameter\nconst input = $input.first().json;\nconst date = input.params?.id || input.id;\n\nreturn [{\n  json: {\n    date: date\n  }\n}];"
+      },
+      "id": "get-date",
+      "name": "Get Date",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 740]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Uren Registratie"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {
+          "rangeDefinition": "specifyRange",
+          "range": "A:F"
+        }
+      },
+      "id": "sheets-read-delete",
+      "name": "Read All Entries",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [680, 740],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Find row number for the date to delete\nconst items = $input.all();\nconst dateToDelete = $('Get Date').item.json.date;\n\n// Find the row (skip header row, so add 2: +1 for header, +1 for 1-based indexing)\nlet rowNumber = -1;\nfor (let i = 0; i < items.length; i++) {\n  if (items[i].json.date === dateToDelete) {\n    rowNumber = i + 2; // +1 for header, +1 for 1-based indexing\n    break;\n  }\n}\n\nif (rowNumber === -1) {\n  throw new Error(`Entry with date ${dateToDelete} not found`);\n}\n\nreturn [{\n  json: {\n    rowNumber: rowNumber,\n    date: dateToDelete\n  }\n}];"
+      },
+      "id": "find-row",
+      "name": "Find Row Number",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 740]
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Uren Registratie"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "startRow": "={{ $json.rowNumber }}",
+        "endRow": "={{ $json.rowNumber }}",
+        "options": {}
+      },
+      "id": "sheets-delete",
+      "name": "Delete Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1120, 740],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Entry deleted\" } }}",
+        "options": {}
+      },
+      "id": "respond-delete",
+      "name": "Respond Delete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 740]
+    }
+  ],
+  "connections": {
+    "Get Week Data": {
+      "main": [
+        [
+          {
+            "node": "Calculate Week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Week": {
+      "main": [
+        [
+          {
+            "node": "Read Sheets Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Sheets Data": {
+      "main": [
+        [
+          {
+            "node": "Format Week Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Week Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Entry": {
+      "main": [
+        [
+          {
+            "node": "Calculate Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Hours": {
+      "main": [
+        [
+          {
+            "node": "Add to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Format Create Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Create Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Entry": {
+      "main": [
+        [
+          {
+            "node": "Get Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Date": {
+      "main": [
+        [
+          {
+            "node": "Read All Entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read All Entries": {
+      "main": [
+        [
+          {
+            "node": "Find Row Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row Number": {
+      "main": [
+        [
+          {
+            "node": "Delete Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Row": {
+      "main": [
+        [
+          {
+            "node": "Respond Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-12-13T00:00:00.000Z",
+  "versionId": "1"
+}

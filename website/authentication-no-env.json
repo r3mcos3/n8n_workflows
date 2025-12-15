@@ -1,0 +1,194 @@
+{
+  "name": "Simple Authentication - No ENV needed",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auth/login",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, X-API-Key"
+              }
+            ]
+          }
+        }
+      },
+      "id": "auth-webhook",
+      "name": "Login Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "auth-login"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['x-api-key']}}",
+              "value2": "VERANDER_DIT_NAAR_JOUW_API_KEY",
+              "operation": "equals"
+            }
+          ]
+        }
+      },
+      "id": "check-api-key",
+      "name": "Check API Key - CHANGE VALUE 2!",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "notes": "IMPORTANT: Click this node and change 'VERANDER_DIT_NAAR_JOUW_API_KEY' to your own API key!"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.password}}",
+              "value2": "VERANDER_DIT_NAAR_JOUW_WACHTWOORD",
+              "operation": "equals"
+            }
+          ]
+        }
+      },
+      "id": "check-password",
+      "name": "Check Password - WIJZIG VALUE 2!",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 200],
+      "notes": "BELANGRIJK: Klik op deze node en verander 'VERANDER_DIT_NAAR_JOUW_WACHTWOORD' naar je eigen wachtwoord!"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"success\": true}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 401,
+        "responseBody": "{\"success\": false, \"error\": \"Invalid password\"}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "invalid-password",
+      "name": "Invalid Password",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 403,
+        "responseBody": "{\"success\": false, \"error\": \"Invalid API key\"}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "invalid-api-key",
+      "name": "Invalid API Key",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 400]
+    }
+  ],
+  "connections": {
+    "Login Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Key": {
+      "main": [
+        [
+          {
+            "node": "Check Password - WIJZIG VALUE 2!",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Password - WIJZIG VALUE 2!": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Password",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-15T00:00:00.000Z",
+  "versionId": "1"
+}

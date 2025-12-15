@@ -1,0 +1,188 @@
+{
+  "name": "Email Week Report - Gmail",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "email/week-report",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, DELETE, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-email",
+      "name": "Email Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "email-report"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Bereken week start en eind\nconst now = new Date();\nconst dayOfWeek = now.getDay();\nconst diff = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;\nconst monday = new Date(now);\nmonday.setDate(now.getDate() + diff);\nmonday.setHours(0, 0, 0, 0);\n\nconst sunday = new Date(monday);\nsunday.setDate(monday.getDate() + 6);\nsunday.setHours(23, 59, 59, 999);\n\n// Week nummer\nconst getWeekNumber = (date) => {\n  const d = new Date(date);\n  d.setHours(0, 0, 0, 0);\n  d.setDate(d.getDate() + 4 - (d.getDay() || 7));\n  const yearStart = new Date(d.getFullYear(), 0, 1);\n  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\n};\n\nconst weekNumber = getWeekNumber(now);\n\n// Format datums\nconst formatDate = (date) => {\n  const months = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];\n  return `${date.getDate()} ${months[date.getMonth()]}`;\n};\n\nreturn [{\n  json: {\n    weekStart: monday.toISOString().split('T')[0],\n    weekEnd: sunday.toISOString().split('T')[0],\n    weekNumber: weekNumber,\n    startDateFormatted: formatDate(monday),\n    endDateFormatted: `${formatDate(sunday)} ${sunday.getFullYear()}`\n  }\n}];"
+      },
+      "id": "calc-week",
+      "name": "Calculate Week Info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Uren Registratie"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {
+          "rangeDefinition": "specifyRange",
+          "range": "A:F"
+        }
+      },
+      "id": "sheets-read",
+      "name": "Get Week Data from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [680, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Filter data and generate HTML email\nconst items = $input.all();\nconst weekInfo = $('Calculate Week Info').item.json;\n\n// Convert dd-MM-yyyy to yyyy-MM-dd for comparison\nconst parseDate = (dateStr) => {\n  if (dateStr.includes('-')) {\n    const parts = dateStr.split('-');\n    if (parts[0].length === 2) {\n      // dd-MM-yyyy format\n      return `${parts[2]}-${parts[1]}-${parts[0]}`;\n    }\n  }\n  return dateStr; // already yyyy-MM-dd\n};\n\n// Filter for current week\nconst weekData = items.filter(item => {\n  const date = parseDate(item.json.date);\n  return date >= weekInfo.weekStart && date <= weekInfo.weekEnd;\n});\n\n// Calculate total\nconst totalHours = weekData.reduce((sum, item) => {\n  return sum + parseFloat(item.json.total_worked_hours || 0);\n}, 0);\n\n// Day names\nconst getDayName = (dateStr) => {\n  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];\n  const parsedDate = parseDate(dateStr);\n  const date = new Date(parsedDate);\n  return days[date.getDay()];\n};\n\n// Generate table rows - dateStr is already in dd-MM-yyyy format\nconst tableRows = weekData.map(item => `\n  <tr>\n    <td>${getDayName(item.json.date)}</td>\n    <td>${item.json.date}</td>\n    <td>${item.json.start_time}</td>\n    <td>${item.json.end_time}</td>\n    <td>${item.json.break_minutes}m</td>\n    <td><strong>${parseFloat(item.json.total_worked_hours || 0).toFixed(2)}h</strong></td>\n    <td style=\"font-size: 0.9em; color: #6b7280;\">${item.json.notes || '-'}</td>\n  </tr>\n`).join('');\n\n// HTML Email\nconst htmlEmail = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>\n    body { \n      font-family: Arial, sans-serif; \n      line-height: 1.6;\n      color: #333;\n      max-width: 800px;\n      margin: 0 auto;\n      padding: 20px;\n      background-color: #f9fafb;\n    }\n    .container {\n      background-color: white;\n      padding: 30px;\n      border-radius: 8px;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n    }\n    h2 { \n      color: #3b82f6; \n      border-bottom: 3px solid #3b82f6;\n      padding-bottom: 10px;\n      margin-top: 0;\n    }\n    table { \n      border-collapse: collapse; \n      width: 100%; \n      margin: 20px 0;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n    }\n    th, td { \n      border: 1px solid #ddd; \n      padding: 12px; \n      text-align: left; \n    }\n    th { \n      background-color: #3b82f6; \n      color: white;\n      font-weight: bold;\n    }\n    tr:nth-child(even) {\n      background-color: #f9fafb;\n    }\n    .total { \n      font-weight: bold; \n      background-color: #e0e7ff;\n      font-size: 1.1em;\n    }\n    .footer {\n      margin-top: 30px;\n      padding-top: 20px;\n      border-top: 2px solid #e5e7eb;\n      color: #6b7280;\n      font-size: 0.9em;\n      text-align: center;\n    }\n    .summary {\n      background-color: #f0f9ff;\n      border-left: 4px solid #3b82f6;\n      padding: 15px;\n      margin: 20px 0;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <h2>⏱️ Hours Overview Week ${weekInfo.weekNumber}</h2>\n    \n    <div class=\"summary\">\n      <p><strong>Period:</strong> ${weekInfo.startDateFormatted} - ${weekInfo.endDateFormatted}</p>\n      <p><strong>Total worked hours:</strong> ${totalHours.toFixed(2)}h</p>\n    </div>\n\n    <table>\n      <thead>\n        <tr>\n          <th>Day</th>\n          <th>Date</th>\n          <th>From</th>\n          <th>To</th>\n          <th>Break</th>\n          <th>Worked</th>\n          <th>Notes</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${tableRows}\n        <tr class=\"total\">\n          <td colspan=\"5\" style=\"text-align: right;\">Total Hours</td>\n          <td>${totalHours.toFixed(2)}h</td>\n          <td></td>\n        </tr>\n      </tbody>\n    </table>\n\n    <div class=\"footer\">\n      <p>This is an automatically generated report from the time registration system.</p>\n      <p>Sent on: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn [{\n  json: {\n    subject: `Hours Overview Week ${weekInfo.weekNumber} - ${weekInfo.startDateFormatted} - ${weekInfo.endDateFormatted}`,\n    html: htmlEmail,\n    weekNumber: weekInfo.weekNumber\n  }\n}];"
+      },
+      "id": "generate-email",
+      "name": "Generate Email HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "jouw-email@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "gmail-send",
+      "name": "Send via Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1120, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Email verstuurd naar jouw-email@gmail.com\" } }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Email Trigger": {
+      "main": [
+        [
+          {
+            "node": "Calculate Week Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Week Info": {
+      "main": [
+        [
+          {
+            "node": "Get Week Data from Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Week Data from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Generate Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email HTML": {
+      "main": [
+        [
+          {
+            "node": "Send via Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via Gmail": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-12-13T00:00:00.000Z",
+  "versionId": "1"
+}
