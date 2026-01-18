@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2026-01-18]
+
+### Added
+- ✨ Add Gmail Organizer workflow for automatic email labeling
+- ✨ Add Gmail Labels Setup workflow for creating required labels
+- 📝 Add documentation for Gmail organizer workflows
+- 📝 Add README for Error Logger workflow
+- 📝 Add README for Hours Email Report workflow (website_supabase)
+
 ## [2025-12-06]
 
 ### Added

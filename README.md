@@ -21,13 +21,16 @@ Example:
 
 Here's a list of the workflows currently available in this repository. Click on the workflow's folder and open its `README.md` for details.
 
-- **YouTube Digest Workflow (No Duplicates)**: Automated email digest with intelligent duplicate detection (`youtube_digest_wokflow_no_dupilcates/`)
-- **YouTube Digest Workflow**: Basic YouTube digest automation (`youtube_digest_workflow/`)
+- **Error Logger**: Centralized error logging to Google Sheets with email notifications (`error_logger/`)
+- **Gmail Organizer**: Automatically categorize and label incoming Gmail emails (`gmail_organizer/`)
+- **Hours Email Report**: Mobile-optimized weekly hours report via webhook (`website_supabase/`)
 - **n8n News**: News aggregation workflow (`n8n_news/`)
 - **Website Workflows**: Workflows related to website operations (`website/`)
     - Authentication without environment variables (`website/authentication-no-env.json`)
     - Email report using Gmail (`website/email-report-gmail.json`)
     - Time tracking with Google Sheets (`website/time-tracking-sheets.json`)
+- **YouTube Digest Workflow**: Basic YouTube digest automation (`youtube_digest_workflow/`)
+- **YouTube Digest Workflow (No Duplicates)**: Automated email digest with intelligent duplicate detection (`youtube_digest_wokflow_no_dupilcates/`)
 
 ## How to Use
 
