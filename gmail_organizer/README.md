@@ -1,28 +1,38 @@
 # Gmail Organizer - Auto Label Emails (AI)
 
-Automatically categorize and label incoming Gmail emails using AI-powered classification with OpenAI GPT-4o-mini.
+Automatically categorize and label incoming Gmail emails using AI-powered classification with OpenAI GPT-4o-mini. Labels are created automatically if they don't exist.
 
 ## Features
 
 - **AI-powered categorization** using OpenAI GPT-4o-mini for intelligent email classification
+- **Auto-create labels** - labels are created on-the-fly if they don't exist
 - Automatically labels new unread emails
 - Categorizes emails into 6 categories: Work, Newsletters, Social Media, Finance, Personal, To Review
 - Runs every minute to process new emails
 - Dynamically fetches label IDs (no hardcoded values)
-- Includes setup workflow to create required labels
 - Low cost: ~$0.0001 per email (GPT-4o-mini)
 
 ## Workflow Diagram
 
-### Setup Workflow (Run Once)
 ```
-Manual Trigger → Get Existing Labels → Check Missing → Filter → Create Label
-```
-
-### Main Organizer Workflow (AI-Powered)
-```
-Gmail Trigger → Get Labels → Prepare Prompt → AI Categorize → Map Label → Add Label
-(new unread)    (fetch IDs)   (build prompt)   (GPT-4o-mini)   (find ID)   (apply)
+Gmail Trigger → Get Labels → Prepare Prompt → AI Categorize → Find or Create Label
+(new unread)    (fetch IDs)   (build prompt)   (GPT-4o-mini)   (check existence)
+                                                                      │
+                                         ┌────────────────────────────┴────────────────────────────┐
+                                         │                                                         │
+                                         ▼                                                         ▼
+                                  [Label Exists]                                          [Label Missing]
+                                         │                                                         │
+                                         ▼                                                         ▼
+                                 Use Existing Label                                         Create Label
+                                         │                                                         │
+                                         │                                                         ▼
+                                         │                                                Use Created Label
+                                         │                                                         │
+                                         └─────────────────────┬───────────────────────────────────┘
+                                                               │
+                                                               ▼
+                                                      Add Label to Email
 ```
 
 ## Categories
@@ -46,16 +56,12 @@ The AI categorizes emails based on context, not just keywords:
 
 ## Installation
 
-### Step 1: Import the Setup Workflow
-1. Import `gmail-labels-setup.json` into n8n
-2. Connect your Gmail OAuth2 credentials to the Gmail nodes
-3. Execute the workflow once to create the required labels
-
-### Step 2: Import the Main Workflow
 1. Import `gmail-organizer-auto-label.json` into n8n
 2. Connect your **Gmail OAuth2 credentials** to all Gmail nodes
 3. Connect your **OpenAI API credentials** to the "AI Categorize" node
 4. Activate the workflow
+
+That's it! Labels will be created automatically when needed.
 
 ## Configuration
 
@@ -83,14 +89,13 @@ Example: Adding a "Shopping" category:
 - Shopping: Online stores, order confirmations, shipping notifications, retail promotions
 ```
 
-Then run the setup workflow to create the new label.
+New labels will be created automatically when the AI categorizes an email into a new category.
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `gmail-labels-setup.json` | One-time setup workflow to create Gmail labels |
-| `gmail-organizer-auto-label.json` | Main AI-powered workflow that auto-labels emails |
+| `gmail-organizer-auto-label.json` | Main AI-powered workflow that auto-labels emails and creates missing labels |
 
 ## Cost Estimation
 
@@ -101,9 +106,6 @@ Using GPT-4o-mini:
 - 1000 emails/month ≈ $0.10
 
 ## Troubleshooting
-
-### "Label not found" Error
-Run the `Gmail Labels Setup` workflow first to create all required labels.
 
 ### Emails Not Being Labeled
 - Check if the workflow is active
@@ -121,3 +123,8 @@ The AI learns from context. If categorization is consistently wrong:
 - Verify your OpenAI API key is valid
 - Check if you have sufficient API credits
 - Ensure the API key has access to GPT-4o-mini
+
+### Label Creation Fails
+- Verify Gmail credentials have permission to create labels
+- Check if a label with a similar name already exists
+- Review execution logs for specific error messages

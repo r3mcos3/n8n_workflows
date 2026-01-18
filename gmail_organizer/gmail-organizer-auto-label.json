@@ -8,9 +8,9 @@
       "typeVersion": 1.3,
       "position": [-400, 320],
       "parameters": {
-        "authentication": "oAuth2",
-        "event": "messageReceived",
-        "simple": true,
+        "pollTimes": {
+          "item": [{"mode": "everyMinute"}]
+        },
         "filters": {
           "readStatus": "unread"
         }
@@ -23,9 +23,7 @@
       "typeVersion": 2.2,
       "position": [-180, 320],
       "parameters": {
-        "authentication": "oAuth2",
-        "resource": "label",
-        "operation": "getAll"
+        "resource": "label"
       }
     },
     {
@@ -35,7 +33,7 @@
       "typeVersion": 2,
       "position": [40, 320],
       "parameters": {
-        "jsCode": "const email = $('Gmail Trigger').first().json;\nconst allLabels = $('Get All Labels').all().map(item => item.json);\n\n// Build available labels info\nconst availableLabels = ['Work', 'Newsletters', 'Social Media', 'Finance', 'Personal', 'To Review'];\n\nreturn [{\n  json: {\n    messageId: email.id,\n    from: email.from || 'Unknown',\n    subject: email.subject || 'No subject',\n    snippet: (email.snippet || '').substring(0, 500),\n    allLabels: allLabels,\n    prompt: `Categorize this email into ONE of these categories: Work, Newsletters, Social Media, Finance, Personal, To Review.\n\nEmail details:\n- From: ${email.from || 'Unknown'}\n- Subject: ${email.subject || 'No subject'}\n- Preview: ${(email.snippet || '').substring(0, 300)}\n\nCategory definitions:\n- Work: Professional emails, work tools (Slack, GitHub, Jira, Zoom, etc.), colleagues, business\n- Newsletters: Subscriptions, digests, marketing emails, promotional content with unsubscribe links\n- Social Media: Facebook, Twitter/X, LinkedIn, Instagram, YouTube, Discord, WhatsApp notifications\n- Finance: Banks, payments, invoices, receipts, subscriptions, PayPal, Stripe, financial services\n- Personal: Emails from friends, family, personal contacts (usually from gmail.com, outlook.com, etc.)\n- To Review: Cannot determine category or doesn't fit others\n\nRespond with ONLY the category name, nothing else. Example: \"Work\" or \"Newsletters\"`\n  }\n}];"
+        "jsCode": "const email = $('Gmail Trigger').first().json;\nconst allLabels = $('Get All Labels').all().map(item => item.json);\n\n// Get email fields (Gmail uses capitalized field names)\nconst from = email.From || email.from || 'Unknown';\nconst subject = email.Subject || email.subject || 'No subject';\nconst snippet = email.snippet || '';\n\nreturn [{\n  json: {\n    messageId: email.id,\n    from: from,\n    subject: subject,\n    snippet: snippet.substring(0, 500),\n    allLabels: allLabels,\n    prompt: `Categorize this email into ONE of these categories: Work, Newsletters, Social Media, Finance, Personal, To Review.\n\nEmail details:\n- From: ${from}\n- Subject: ${subject}\n- Preview: ${snippet.substring(0, 300)}\n\nCategory definitions:\n- Work: Professional emails, work tools (Slack, GitHub, Jira, Zoom, etc.), colleagues, business\n- Newsletters: Subscriptions, digests, marketing emails, promotional content with unsubscribe links\n- Social Media: Facebook, Twitter/X, LinkedIn, Instagram, YouTube, Discord, WhatsApp notifications\n- Finance: Banks, payments, invoices, receipts, subscriptions, PayPal, Stripe, financial services\n- Personal: Emails from friends, family, personal contacts (usually from gmail.com, outlook.com, etc.)\n- To Review: Cannot determine category or doesn't fit others\n\nRespond with ONLY the category name, nothing else. Example: Work or Newsletters`\n  }\n}];"
       }
     },
     {
@@ -52,13 +50,16 @@
           "value": "gpt-4o-mini",
           "mode": "id"
         },
-        "messages": {
+        "responses": {
           "values": [
             {
+              "type": "text",
+              "role": "user",
               "content": "={{ $json.prompt }}"
             }
           ]
         },
+        "simplify": true,
         "options": {
           "temperature": 0.1,
           "maxTokens": 20
@@ -66,13 +67,74 @@
       }
     },
     {
-      "id": "map_label",
-      "name": "Map to Label ID",
+      "id": "find_label",
+      "name": "Find or Create Label",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [480, 320],
       "parameters": {
-        "jsCode": "const prepData = $('Prepare AI Prompt').first().json;\nconst aiResponse = $('AI Categorize').first().json;\nconst allLabels = prepData.allLabels;\n\n// Extract category from AI response\nlet category = (aiResponse.content || aiResponse.message?.content || 'To Review').trim();\n\n// Normalize the category name\nconst validCategories = ['Work', 'Newsletters', 'Social Media', 'Finance', 'Personal', 'To Review'];\nconst normalizedCategory = validCategories.find(c => \n  c.toLowerCase() === category.toLowerCase() ||\n  category.toLowerCase().includes(c.toLowerCase())\n) || 'To Review';\n\n// Find label ID\nconst label = allLabels.find(l => l.name === normalizedCategory);\n\nif (!label) {\n  throw new Error(`Label \"${normalizedCategory}\" not found. Please run the Gmail Labels Setup workflow first.`);\n}\n\nreturn [{\n  json: {\n    messageId: prepData.messageId,\n    from: prepData.from,\n    subject: prepData.subject,\n    aiCategory: category,\n    labelName: normalizedCategory,\n    labelId: label.id\n  }\n}];"
+        "jsCode": "const prepData = $('Prepare AI Prompt').first().json;\nconst aiResponse = $('AI Categorize').first().json;\nconst allLabels = prepData.allLabels;\n\n// Extract category from AI response\nlet category = 'To Review';\n\ntry {\n  if (typeof aiResponse === 'string') {\n    category = aiResponse;\n  } else if (aiResponse.content) {\n    category = aiResponse.content;\n  } else if (aiResponse.message?.content) {\n    category = aiResponse.message.content;\n  } else if (aiResponse.text) {\n    category = aiResponse.text;\n  } else if (aiResponse.output?.[0]?.content?.[0]?.text) {\n    category = aiResponse.output[0].content[0].text;\n  } else if (aiResponse.choices?.[0]?.message?.content) {\n    category = aiResponse.choices[0].message.content;\n  }\n} catch (e) {\n  console.log('Error parsing AI response:', e);\n}\n\ncategory = String(category).trim();\n\n// Normalize the category name\nconst validCategories = ['Work', 'Newsletters', 'Social Media', 'Finance', 'Personal', 'To Review'];\nlet normalizedCategory = validCategories.find(c => \n  c.toLowerCase() === category.toLowerCase() ||\n  category.toLowerCase().includes(c.toLowerCase())\n) || 'To Review';\n\n// Find existing label\nconst existingLabel = allLabels.find(l => l.name === normalizedCategory);\n\nreturn [{\n  json: {\n    messageId: prepData.messageId,\n    from: prepData.from,\n    subject: prepData.subject,\n    aiCategory: category,\n    labelName: normalizedCategory,\n    labelId: existingLabel ? existingLabel.id : null,\n    needsCreation: !existingLabel\n  }\n}];"
+      }
+    },
+    {
+      "id": "check_label",
+      "name": "Label Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [700, 320],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "exists",
+              "leftValue": "={{ $json.needsCreation }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "create_label",
+      "name": "Create Label",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [920, 480],
+      "parameters": {
+        "resource": "label",
+        "operation": "create",
+        "name": "={{ $json.labelName }}"
+      }
+    },
+    {
+      "id": "use_created",
+      "name": "Use Created Label",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 480],
+      "parameters": {
+        "jsCode": "const originalData = $('Find or Create Label').first().json;\nconst createdLabel = $('Create Label').first().json;\n\nreturn [{\n  json: {\n    messageId: originalData.messageId,\n    labelId: createdLabel.id,\n    labelName: originalData.labelName\n  }\n}];"
+      }
+    },
+    {
+      "id": "use_existing",
+      "name": "Use Existing Label",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 160],
+      "parameters": {
+        "jsCode": "const originalData = $('Find or Create Label').first().json;\n\nreturn [{\n  json: {\n    messageId: originalData.messageId,\n    labelId: originalData.labelId,\n    labelName: originalData.labelName\n  }\n}];"
       }
     },
     {
@@ -80,10 +142,8 @@
       "name": "Add Label to Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
-      "position": [700, 320],
+      "position": [1360, 320],
       "parameters": {
-        "authentication": "oAuth2",
-        "resource": "message",
         "operation": "addLabels",
         "messageId": "={{ $json.messageId }}",
         "labelIds": ["={{ $json.labelId }}"]
@@ -92,59 +152,34 @@
   ],
   "connections": {
     "Gmail Trigger": {
-      "main": [
-        [
-          {
-            "node": "Get All Labels",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Get All Labels", "type": "main", "index": 0}]]
     },
     "Get All Labels": {
-      "main": [
-        [
-          {
-            "node": "Prepare AI Prompt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Prepare AI Prompt", "type": "main", "index": 0}]]
     },
     "Prepare AI Prompt": {
-      "main": [
-        [
-          {
-            "node": "AI Categorize",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "AI Categorize", "type": "main", "index": 0}]]
     },
     "AI Categorize": {
+      "main": [[{"node": "Find or Create Label", "type": "main", "index": 0}]]
+    },
+    "Find or Create Label": {
+      "main": [[{"node": "Label Exists?", "type": "main", "index": 0}]]
+    },
+    "Label Exists?": {
       "main": [
-        [
-          {
-            "node": "Map to Label ID",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Use Existing Label", "type": "main", "index": 0}],
+        [{"node": "Create Label", "type": "main", "index": 0}]
       ]
     },
-    "Map to Label ID": {
-      "main": [
-        [
-          {
-            "node": "Add Label to Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Create Label": {
+      "main": [[{"node": "Use Created Label", "type": "main", "index": 0}]]
+    },
+    "Use Created Label": {
+      "main": [[{"node": "Add Label to Email", "type": "main", "index": 0}]]
+    },
+    "Use Existing Label": {
+      "main": [[{"node": "Add Label to Email", "type": "main", "index": 0}]]
     }
   },
   "settings": {
