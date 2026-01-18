@@ -1,0 +1,96 @@
+{
+  "name": "Gmail Organizer - Auto Label Emails",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [-224, 320],
+      "parameters": {
+        "authentication": "oAuth2",
+        "event": "messageReceived",
+        "simple": true,
+        "filters": {
+          "readStatus": "unread"
+        }
+      }
+    },
+    {
+      "id": "get_labels",
+      "name": "Get All Labels",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [0, 320],
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "label",
+        "operation": "getAll"
+      }
+    },
+    {
+      "id": "categorize",
+      "name": "Categorize Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 320],
+      "parameters": {
+        "jsCode": "// Get email data from trigger and labels\nconst email = $('Gmail Trigger').first().json;\nconst allLabels = $('Get All Labels').all().map(item => item.json);\n\nconst from = (email.from || '').toLowerCase();\nconst subject = (email.subject || '').toLowerCase();\n\n// Define categorization rules\nconst rules = {\n  work: [\n    'slack.com', 'notion.so', 'atlassian', 'jira', 'confluence',\n    'github.com', 'gitlab', 'bitbucket', 'asana', 'monday.com',\n    'zoom.us', 'teams', 'meet.google', 'calendar'\n  ],\n  newsletters: [\n    'newsletter', 'digest', 'weekly', 'update', 'substack',\n    'mailchimp', 'sendinblue', 'constantcontact', 'unsubscribe'\n  ],\n  social: [\n    'facebook', 'twitter', 'instagram', 'linkedin', 'tiktok',\n    'youtube', 'reddit', 'discord', 'whatsapp', 'telegram'\n  ],\n  finance: [\n    'bank', 'paypal', 'stripe', 'invoice', 'payment', 'transaction',\n    'receipt', 'billing', 'subscription', 'credit', 'debit'\n  ],\n  personal: [\n    'gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com',\n    'icloud.com', 'protonmail'\n  ]\n};\n\n// Label name mapping\nconst labelMapping = {\n  'work': 'Work',\n  'newsletters': 'Newsletters', \n  'social': 'Social Media',\n  'finance': 'Finance',\n  'personal': 'Personal',\n  'other': 'To Review'\n};\n\n// Determine category\nlet category = 'other';\nfor (const [cat, patterns] of Object.entries(rules)) {\n  for (const pattern of patterns) {\n    if (from.includes(pattern) || subject.includes(pattern)) {\n      category = cat;\n      break;\n    }\n  }\n  if (category !== 'other') break;\n}\n\n// Find label ID\nconst labelName = labelMapping[category];\nconst label = allLabels.find(l => l.name === labelName);\n\nif (!label) {\n  throw new Error(`Label \"${labelName}\" not found. Please run the \"Gmail Labels Setup\" workflow first.`);\n}\n\nreturn [{\n  json: {\n    messageId: email.id,\n    from: email.from,\n    subject: email.subject,\n    category: category,\n    labelName: labelName,\n    labelId: label.id\n  }\n}];"
+      }
+    },
+    {
+      "id": "add_label",
+      "name": "Add Label to Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [440, 320],
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $json.messageId }}",
+        "labelIds": ["={{ $json.labelId }}"]
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get All Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Labels": {
+      "main": [
+        [
+          {
+            "node": "Categorize Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Categorize Email": {
+      "main": [
+        [
+          {
+            "node": "Add Label to Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}
