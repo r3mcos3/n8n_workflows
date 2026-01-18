@@ -1,12 +1,12 @@
 {
-  "name": "Gmail Organizer - Auto Label Emails",
+  "name": "Gmail Organizer - Auto Label Emails (AI)",
   "nodes": [
     {
       "id": "trigger",
       "name": "Gmail Trigger",
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.3,
-      "position": [-224, 320],
+      "position": [-400, 320],
       "parameters": {
         "authentication": "oAuth2",
         "event": "messageReceived",
@@ -21,7 +21,7 @@
       "name": "Get All Labels",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
-      "position": [0, 320],
+      "position": [-180, 320],
       "parameters": {
         "authentication": "oAuth2",
         "resource": "label",
@@ -29,13 +29,50 @@
       }
     },
     {
-      "id": "categorize",
-      "name": "Categorize Email",
+      "id": "prepare_prompt",
+      "name": "Prepare AI Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 320],
+      "position": [40, 320],
       "parameters": {
-        "jsCode": "// Get email data from trigger and labels\nconst email = $('Gmail Trigger').first().json;\nconst allLabels = $('Get All Labels').all().map(item => item.json);\n\nconst from = (email.from || '').toLowerCase();\nconst subject = (email.subject || '').toLowerCase();\n\n// Define categorization rules\nconst rules = {\n  work: [\n    'slack.com', 'notion.so', 'atlassian', 'jira', 'confluence',\n    'github.com', 'gitlab', 'bitbucket', 'asana', 'monday.com',\n    'zoom.us', 'teams', 'meet.google', 'calendar'\n  ],\n  newsletters: [\n    'newsletter', 'digest', 'weekly', 'update', 'substack',\n    'mailchimp', 'sendinblue', 'constantcontact', 'unsubscribe'\n  ],\n  social: [\n    'facebook', 'twitter', 'instagram', 'linkedin', 'tiktok',\n    'youtube', 'reddit', 'discord', 'whatsapp', 'telegram'\n  ],\n  finance: [\n    'bank', 'paypal', 'stripe', 'invoice', 'payment', 'transaction',\n    'receipt', 'billing', 'subscription', 'credit', 'debit'\n  ],\n  personal: [\n    'gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com',\n    'icloud.com', 'protonmail'\n  ]\n};\n\n// Label name mapping\nconst labelMapping = {\n  'work': 'Work',\n  'newsletters': 'Newsletters', \n  'social': 'Social Media',\n  'finance': 'Finance',\n  'personal': 'Personal',\n  'other': 'To Review'\n};\n\n// Determine category\nlet category = 'other';\nfor (const [cat, patterns] of Object.entries(rules)) {\n  for (const pattern of patterns) {\n    if (from.includes(pattern) || subject.includes(pattern)) {\n      category = cat;\n      break;\n    }\n  }\n  if (category !== 'other') break;\n}\n\n// Find label ID\nconst labelName = labelMapping[category];\nconst label = allLabels.find(l => l.name === labelName);\n\nif (!label) {\n  throw new Error(`Label \"${labelName}\" not found. Please run the \"Gmail Labels Setup\" workflow first.`);\n}\n\nreturn [{\n  json: {\n    messageId: email.id,\n    from: email.from,\n    subject: email.subject,\n    category: category,\n    labelName: labelName,\n    labelId: label.id\n  }\n}];"
+        "jsCode": "const email = $('Gmail Trigger').first().json;\nconst allLabels = $('Get All Labels').all().map(item => item.json);\n\n// Build available labels info\nconst availableLabels = ['Work', 'Newsletters', 'Social Media', 'Finance', 'Personal', 'To Review'];\n\nreturn [{\n  json: {\n    messageId: email.id,\n    from: email.from || 'Unknown',\n    subject: email.subject || 'No subject',\n    snippet: (email.snippet || '').substring(0, 500),\n    allLabels: allLabels,\n    prompt: `Categorize this email into ONE of these categories: Work, Newsletters, Social Media, Finance, Personal, To Review.\n\nEmail details:\n- From: ${email.from || 'Unknown'}\n- Subject: ${email.subject || 'No subject'}\n- Preview: ${(email.snippet || '').substring(0, 300)}\n\nCategory definitions:\n- Work: Professional emails, work tools (Slack, GitHub, Jira, Zoom, etc.), colleagues, business\n- Newsletters: Subscriptions, digests, marketing emails, promotional content with unsubscribe links\n- Social Media: Facebook, Twitter/X, LinkedIn, Instagram, YouTube, Discord, WhatsApp notifications\n- Finance: Banks, payments, invoices, receipts, subscriptions, PayPal, Stripe, financial services\n- Personal: Emails from friends, family, personal contacts (usually from gmail.com, outlook.com, etc.)\n- To Review: Cannot determine category or doesn't fit others\n\nRespond with ONLY the category name, nothing else. Example: \"Work\" or \"Newsletters\"`\n  }\n}];"
+      }
+    },
+    {
+      "id": "openai",
+      "name": "AI Categorize",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [260, 320],
+      "parameters": {
+        "resource": "text",
+        "operation": "response",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "id"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 20
+        }
+      }
+    },
+    {
+      "id": "map_label",
+      "name": "Map to Label ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 320],
+      "parameters": {
+        "jsCode": "const prepData = $('Prepare AI Prompt').first().json;\nconst aiResponse = $('AI Categorize').first().json;\nconst allLabels = prepData.allLabels;\n\n// Extract category from AI response\nlet category = (aiResponse.content || aiResponse.message?.content || 'To Review').trim();\n\n// Normalize the category name\nconst validCategories = ['Work', 'Newsletters', 'Social Media', 'Finance', 'Personal', 'To Review'];\nconst normalizedCategory = validCategories.find(c => \n  c.toLowerCase() === category.toLowerCase() ||\n  category.toLowerCase().includes(c.toLowerCase())\n) || 'To Review';\n\n// Find label ID\nconst label = allLabels.find(l => l.name === normalizedCategory);\n\nif (!label) {\n  throw new Error(`Label \"${normalizedCategory}\" not found. Please run the Gmail Labels Setup workflow first.`);\n}\n\nreturn [{\n  json: {\n    messageId: prepData.messageId,\n    from: prepData.from,\n    subject: prepData.subject,\n    aiCategory: category,\n    labelName: normalizedCategory,\n    labelId: label.id\n  }\n}];"
       }
     },
     {
@@ -43,7 +80,7 @@
       "name": "Add Label to Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
-      "position": [440, 320],
+      "position": [700, 320],
       "parameters": {
         "authentication": "oAuth2",
         "resource": "message",
@@ -69,14 +106,36 @@
       "main": [
         [
           {
-            "node": "Categorize Email",
+            "node": "Prepare AI Prompt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Categorize Email": {
+    "Prepare AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Categorize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Categorize": {
+      "main": [
+        [
+          {
+            "node": "Map to Label ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map to Label ID": {
       "main": [
         [
           {

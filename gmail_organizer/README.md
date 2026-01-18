@@ -1,14 +1,16 @@
-# Gmail Organizer - Auto Label Emails
+# Gmail Organizer - Auto Label Emails (AI)
 
-Automatically categorize and label incoming Gmail emails based on sender and subject patterns.
+Automatically categorize and label incoming Gmail emails using AI-powered classification with OpenAI GPT-4o-mini.
 
 ## Features
 
+- **AI-powered categorization** using OpenAI GPT-4o-mini for intelligent email classification
 - Automatically labels new unread emails
 - Categorizes emails into 6 categories: Work, Newsletters, Social Media, Finance, Personal, To Review
 - Runs every minute to process new emails
 - Dynamically fetches label IDs (no hardcoded values)
 - Includes setup workflow to create required labels
+- Low cost: ~$0.0001 per email (GPT-4o-mini)
 
 ## Workflow Diagram
 
@@ -17,26 +19,29 @@ Automatically categorize and label incoming Gmail emails based on sender and sub
 Manual Trigger → Get Existing Labels → Check Missing → Filter → Create Label
 ```
 
-### Main Organizer Workflow
+### Main Organizer Workflow (AI-Powered)
 ```
-Gmail Trigger → Get All Labels → Categorize Email → Add Label to Email
-(new unread)     (fetch IDs)      (Code node)        (apply label)
+Gmail Trigger → Get Labels → Prepare Prompt → AI Categorize → Map Label → Add Label
+(new unread)    (fetch IDs)   (build prompt)   (GPT-4o-mini)   (find ID)   (apply)
 ```
 
-## Categories and Detection Patterns
+## Categories
 
-| Category | Label | Detection Patterns |
-|----------|-------|-------------------|
-| Work | Work | slack.com, notion.so, jira, github, zoom, teams, asana, monday.com |
-| Newsletters | Newsletters | newsletter, digest, weekly, substack, mailchimp, unsubscribe |
-| Social Media | Social Media | facebook, twitter, linkedin, instagram, youtube, discord, telegram |
-| Finance | Finance | bank, paypal, stripe, invoice, payment, receipt, billing |
-| Personal | Personal | gmail.com, outlook.com, hotmail.com, yahoo.com, icloud.com |
-| Other | To Review | Everything that doesn't match any pattern |
+The AI categorizes emails based on context, not just keywords:
+
+| Category | Description |
+|----------|-------------|
+| **Work** | Professional emails, work tools (Slack, GitHub, Jira, Zoom), colleagues, business communications |
+| **Newsletters** | Subscriptions, digests, marketing emails, promotional content |
+| **Social Media** | Facebook, Twitter/X, LinkedIn, Instagram, YouTube, Discord notifications |
+| **Finance** | Banks, payments, invoices, receipts, subscriptions, financial services |
+| **Personal** | Emails from friends, family, personal contacts |
+| **To Review** | Cannot determine category or doesn't fit others |
 
 ## Requirements
 
 - Gmail OAuth2 API credentials configured in n8n
+- **OpenAI API credentials** configured in n8n
 - Gmail account with API access enabled
 
 ## Installation
@@ -48,39 +53,52 @@ Gmail Trigger → Get All Labels → Categorize Email → Add Label to Email
 
 ### Step 2: Import the Main Workflow
 1. Import `gmail-organizer-auto-label.json` into n8n
-2. Connect your Gmail OAuth2 credentials to all Gmail nodes
-3. Activate the workflow
+2. Connect your **Gmail OAuth2 credentials** to all Gmail nodes
+3. Connect your **OpenAI API credentials** to the "AI Categorize" node
+4. Activate the workflow
 
 ## Configuration
 
-### Adding Custom Patterns
+### AI Model Settings
 
-Edit the `Categorize Email` Code node to add custom patterns:
+The "AI Categorize" node uses these settings for optimal performance:
 
+| Setting | Value | Description |
+|---------|-------|-------------|
+| Model | gpt-4o-mini | Fast and cost-effective |
+| Temperature | 0.1 | Low for consistent categorization |
+| Max Tokens | 20 | Only need category name |
+
+### Customizing Categories
+
+To modify the AI's categorization behavior, edit the prompt in the "Prepare AI Prompt" Code node. You can:
+
+- Add new categories
+- Modify category definitions
+- Add specific rules for your use case
+
+Example: Adding a "Shopping" category:
 ```javascript
-const rules = {
-  work: [
-    'slack.com', 'notion.so', // ... existing patterns
-    'your-company.com',       // Add your company domain
-    'custom-tool.io'          // Add custom work tools
-  ],
-  // ... other categories
-};
+// In the prompt, add:
+- Shopping: Online stores, order confirmations, shipping notifications, retail promotions
 ```
 
-### Adding New Categories
-
-1. Add the new label name to the setup workflow's `requiredLabels` array
-2. Add the new category patterns to the `rules` object
-3. Add the mapping in `labelMapping`
-4. Re-run the setup workflow to create the new label
+Then run the setup workflow to create the new label.
 
 ## Files
 
 | File | Description |
 |------|-------------|
 | `gmail-labels-setup.json` | One-time setup workflow to create Gmail labels |
-| `gmail-organizer-auto-label.json` | Main workflow that auto-labels incoming emails |
+| `gmail-organizer-auto-label.json` | Main AI-powered workflow that auto-labels emails |
+
+## Cost Estimation
+
+Using GPT-4o-mini:
+- ~150 input tokens per email
+- ~5 output tokens per email
+- Cost: ~$0.0001 per email
+- 1000 emails/month ≈ $0.10
 
 ## Troubleshooting
 
@@ -90,7 +108,16 @@ Run the `Gmail Labels Setup` workflow first to create all required labels.
 ### Emails Not Being Labeled
 - Check if the workflow is active
 - Verify Gmail credentials are working
+- Verify OpenAI credentials are configured
 - Check the execution logs for errors
 
 ### Wrong Category Assignment
-Edit the patterns in the `Categorize Email` Code node to better match your email sources.
+The AI learns from context. If categorization is consistently wrong:
+1. Check the prompt in "Prepare AI Prompt" node
+2. Add more specific definitions for your categories
+3. Consider adding example emails to the prompt
+
+### OpenAI API Errors
+- Verify your OpenAI API key is valid
+- Check if you have sufficient API credits
+- Ensure the API key has access to GPT-4o-mini
