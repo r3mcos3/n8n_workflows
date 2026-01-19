@@ -1,0 +1,213 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -16
+      ],
+      "id": "449962c9-037a-4bc3-9e21-5fbaedee9612",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1fgSY9zhSusoV7N5PLFGzapM7xtlj8DKh_NhE6aAwUAc",
+          "mode": "list",
+          "cachedResultName": "Error Logs N8N",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fgSY9zhSusoV7N5PLFGzapM7xtlj8DKh_NhE6aAwUAc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Blad1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fgSY9zhSusoV7N5PLFGzapM7xtlj8DKh_NhE6aAwUAc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.format('dd-MM-yyyy HH:MM') }}",
+            "Workflow": "={{ $json.workflow.name }}",
+            "URL": "={{ $json.execution.url }}",
+            "Node": "={{ $json.execution.error.node.name }}",
+            "Error Message": "={{ $json.execution.error.message }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Node",
+              "displayName": "Node",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error Message",
+              "displayName": "Error Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        192,
+        -112
+      ],
+      "id": "d7946b9e-fe8b-4a25-aedd-74b9fea4800a",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "EHSMpTFQLjhCVphg",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "r3mcos3@gmail.com",
+        "subject": "=N8N Workflow: {{ $json.workflow.name }} Failed!!",
+        "emailType": "text",
+        "message": "=Workflow Error: {{ $json.workflow.name }}\n\n{{ $json.execution.error.node.name }} Error at: {{ $now.format('dd-MM-yyyy HH:MM') }}\n\nThe error message was: {{ $json.execution.error.message }}\n\nSee the execution here: {{ $json.execution.url }}\n\nGreetz N8N.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        96
+      ],
+      "id": "89bf68eb-209a-479e-9172-3a9412989601",
+      "name": "Send a message",
+      "webhookId": "8de2ce40-73e7-4010-9c9e-80a1e49fd270",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9oaYt6StK0OoT5B8",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Error Trigger": [
+      {
+        "execution": {
+          "id": "342",
+          "url": "https://n8n.13-home.org/workflow/MZMGAA6DmxfkESKLity15/executions/342",
+          "error": {
+            "level": "warning",
+            "tags": {},
+            "timestamp": 1768052802584,
+            "context": {},
+            "functionality": "regular",
+            "name": "NodeOperationError",
+            "node": {
+              "parameters": {
+                "aiAgentStarterCallout": "",
+                "promptType": "define",
+                "text": "={{ $json.text }}",
+                "hasOutputParser": false,
+                "needsFallback": false,
+                "options": {
+                  "systemMessage": "=Je bent de Main AI Agent - een slimme coordinator die gespecialiseerde sub-agents aanstuurt.\n\n**Jouw Rol:**\n\nJe bent de hoofdcoördinator die:\n1. Gebruikersvragen analyseert\n2. Besluit welke sub-agent(s) nodig zijn\n3. Sub-agents aanstuurt met duidelijke instructies\n4. Resultaten combineert en presenteert\n\n**Beschikbare Sub-Agents:**\n\n📧 **Gmail Sub-Agent** (tool: gmail_agent)\n- Specialist in email beheer\n- Kan: emails zoeken, lezen, versturen, labelen, verwijderen\n- Gebruik voor: alle email gerelateerde vragen\n- Input: { \"task\": \"duidelijke beschrijving van wat gedaan moet worden\" }\n\n📅 **Calendar Sub-Agent** (tool: calendar_agent)\n- Specialist in agenda beheer\n- Kan: afspraken bekijken, maken, wijzigen, verwijderen, analyseren\n- Gebruik voor: alle kalender/agenda vragen\n- Input: { \"task\": \"duidelijke beschrijving van wat gedaan moet worden\" }\n\n🌐 **Web Search** (ingebouwd)\n- Voor actuele informatie\n- Gebruik voor: weer, nieuws, current events\n\n**Wanneer Welke Sub-Agent:**\n\n📧 **Gmail Agent aanroepen bij:**\n- \"Heb ik emails van X?\"\n- \"Zoek emails over Y\"\n- \"Stuur email naar Z\"\n- \"Vat email van A samen\"\n- \"Belangrijke emails vandaag?\"\n- \"Ongelezen mails\"\n\n📅 **Calendar Agent aanroepen bij:**\n- \"Wat staat er op mijn agenda?\"\n- \"Ben ik vrij op X?\"\n- \"Plan meeting met Y\"\n- \"Verzet afspraak naar Z\"\n- \"Overzicht van mijn week\"\n- \"Vrije tijdslots\"\n\n🌤️ **Web Search gebruiken bij:**\n- \"Hoe is het weer?\"\n- \"Wat is het nieuws?\"\n- \"Laatste ontwikkelingen over X\"\n\n💬 **Zelf beantwoorden bij:**\n- Algemene kennis vragen\n- Conversatie\n- Simpele facts\n\n**Werkwijze:**\n\n1. **Analyseer de vraag:**\n   ```\n   User: \"Wat zijn mijn taken vandaag?\"\n   \n   Analyse:\n   - Combinatie van agenda + emails\n   - Roep beide sub-agents aan\n   ```\n\n2. **Roep sub-agent(s) aan:**\n   ```\n   gmail_agent: { \"task\": \"Zoek belangrijke/urgente emails van vandaag\" }\n   calendar_agent: { \"task\": \"Geef overzicht van agenda vandaag\" }\n   ```\n\n3. **Combineer resultaten:**\n   ```\n   Presenteer: agenda items + belangrijke emails = complete overzicht\n   ```\n\n4. **Format response:**\n   - Gebruik emoji's\n   - Maak het overzichtelijk\n   - Geef context en suggesties\n\n**Response Format:**\n\nGebruik overzichtelijke formatting:\n\n```\n📋 Jouw Taken Vandaag:\n\n📅 AGENDA:\n09:00 - 10:00: Team standup\n11:00 - 12:30: Client meeting\n14:00 - 15:00: Project review\n\nVrije tijd: 10:00-11:00, 12:30-14:00, na 15:00\n\n📧 BELANGRIJKE EMAILS:\n• Van Sarah: \"Project update needed\" (urgent)\n• Van Manager: \"Q4 results review\"\n• Van Jan: \"Meeting prep materials\"\n\n💡 SUGGESTIES:\n- Prep materials voor client meeting\n- Reageer op Sarah's urgente email\n- Review Q4 results voor 14:00 meeting\n```\n\n**Voorbeelden:**\n\n**Voorbeeld 1: Email vraag**\nUser: \"Heb ik nieuwe emails?\"\nAction:\n```\ngmail_agent({ \n  \"task\": \"Zoek ongelezen emails\" \n})\n```\nResponse: Format gmail_agent output mooi\n\n**Voorbeeld 2: Kalender vraag**\nUser: \"Ben ik vrij morgen om 14:00?\"\nAction:\n```\ncalendar_agent({ \n  \"task\": \"Check of morgen om 14:00 vrij is\" \n})\n```\nResponse: Format calendar_agent output mooi\n\n**Voorbeeld 3: Gecombineerd**\nUser: \"Prep me voor vandaag\"\nAction:\n```\n1. calendar_agent({ \"task\": \"Geef agenda overzicht vandaag\" })\n2. gmail_agent({ \"task\": \"Zoek belangrijke/urgente emails\" })\n```\nResponse: Combineer beide outputs in handig overzicht\n\n**Voorbeeld 4: Weer**\nUser: \"Hoe is het weer?\"\nAction: Gebruik web_search \"weer tilburg\"\nResponse: Format weer info\n\n**Voorbeeld 5: Complex**\nUser: \"Zoek een vrij tijdslot deze week en stuur een meeting invite naar Jan\"\nAction:\n```\n1. calendar_agent({ \"task\": \"Vind vrije tijdslots deze week voor 1 uur meeting\" })\n2. Laat gebruiker kiezen\n3. calendar_agent({ \"task\": \"Maak afspraak op [gekozen tijd] met Jan\" })\n4. gmail_agent({ \"task\": \"Stuur meeting invite naar jan@example.com\" })\n```\n\n**Belangrijke Regels:**\n\n1. **Delegeer aan specialisten:**\n   - Gmail vragen → gmail_agent\n   - Calendar vragen → calendar_agent\n   - Niet zelf proberen te doen wat sub-agents kunnen\n\n2. **Geef duidelijke instructies:**\n   - Wees specifiek in de \"task\" parameter\n   - Include relevante context\n   - Vermeld wat gebruiker exact wil\n\n3. **Combineer intelligent:**\n   - Als vraag beide domeinen raakt, gebruik beide agents\n   - Presenteer gecombineerd resultaat\n\n4. **Format mooi:**\n   - Gebruik emoji's voor visuele structuur\n   - Maak lijsten overzichtelijk\n   - Geef context en suggesties\n\n5. **Wees proactief:**\n   - Anticipeer op vervolgvragen\n   - Geef nuttige suggesties\n   - Denk mee met de gebruiker\n\n**Standaard Settings:**\n- Locatie: Tilburg, Nederland\n- Taal: Nederlands\n- Tijdzone: Europe/Amsterdam\n- Friendly, behulpzame toon\n\n**Error Handling:**\n\nAls sub-agent error returned:\n- Leg probleem uit aan gebruiker\n- Suggest alternatieve aanpak\n- Vraag om verduidelijking indien nodig\n\nJe bent de centrale hub. Orchestrate de sub-agents effectief om de gebruiker optimaal te helpen! 🚀\n\n## BELANGRIJK\nDatum/Tijd = {{ $now }}"
+                }
+              },
+              "type": "@n8n/n8n-nodes-langchain.agent",
+              "typeVersion": 3,
+              "position": [
+                -560,
+                -144
+              ],
+              "id": "34405cc6-cafd-42c2-afa3-5eee7808c0f2",
+              "name": "Main AI Agent"
+            },
+            "messages": [],
+            "message": "A Chat Model sub-node must be connected and enabled",
+            "stack": "NodeOperationError: A Chat Model sub-node must be connected and enabled\n    at validateInputConfiguration (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_ec37920eb95917b28efaa783206b20f3/node_modules/n8n-core/src/execution-engine/node-execution-context/utils/get-input-connection-data.ts:231:11)\n    at ExecuteContext.getInputConnectionData (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_ec37920eb95917b28efaa783206b20f3/node_modules/n8n-core/src/execution-engine/node-execution-context/utils/get-input-connection-data.ts:271:2)\n    at ExecuteContext.getInputConnectionData (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_ec37920eb95917b28efaa783206b20f3/node_modules/n8n-core/src/execution-engine/node-execution-context/execute-context.ts:180:39)\n    at getChatModel (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+n8n-nodes-langchain@file+packages+@n8n+nodes-langchain_483a58943c290d26157214acd0d782a6/node_modules/@n8n/n8n-nodes-langchain/nodes/agents/Agent/agents/ToolsAgent/common.ts:345:36)\n    at buildToolsAgentExecutionContext (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+n8n-nodes-langchain@file+packages+@n8n+nodes-langchain_483a58943c290d26157214acd0d782a6/node_modules/@n8n/n8n-nodes-langchain/nodes/agents/Agent/agents/ToolsAgent/V3/helpers/buildExecutionContext.ts:42:22)\n    at ExecuteContext.toolsAgentExecute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+n8n-nodes-langchain@file+packages+@n8n+nodes-langchain_483a58943c290d26157214acd0d782a6/node_modules/@n8n/n8n-nodes-langchain/nodes/agents/Agent/agents/ToolsAgent/V3/execute.ts:39:27)\n    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+n8n-nodes-langchain@file+packages+@n8n+nodes-langchain_483a58943c290d26157214acd0d782a6/node_modules/@n8n/n8n-nodes-langchain/nodes/agents/Agent/V3/AgentV3.node.ts:139:10)\n    at WorkflowExecute.executeNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_ec37920eb95917b28efaa783206b20f3/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1045:8)\n    at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_ec37920eb95917b28efaa783206b20f3/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1226:11)\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_ec37920eb95917b28efaa783206b20f3/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1662:27"
+          },
+          "lastNodeExecuted": "Main AI Agent",
+          "mode": "webhook",
+          "executionContext": {
+            "version": 1,
+            "establishedAt": 1768052802572,
+            "source": "webhook",
+            "triggerNode": {
+              "name": "Telegram Trigger",
+              "type": "n8n-nodes-base.telegramTrigger"
+            }
+          }
+        },
+        "workflow": {
+          "id": "MZMGAA6DmxfkESKLity15",
+          "name": "My AI Agent - With Sub-Agents"
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e56dc74e981e05751c78b20a7ab53a07a6229c4ec7e682064416ecce2998ca88"
+  }
+}

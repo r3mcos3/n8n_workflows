@@ -1,0 +1,105 @@
+{
+  "name": "Hours Email Report - Mobile Optimized",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email/week-report",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "hours-email-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data from webhook body\nconst data = $input.item.json.body || $input.item.json;\n\nconst weekNumber = data.weekNumber;\nconst startDate = data.formattedStartDate;\nconst endDate = data.formattedEndDate;\nconst days = data.days || [];\nconst totalHours = data.total_hours || 0;\n\n// Function to get day name from date\nfunction getDayName(dateStr) {\n  const date = new Date(dateStr);\n  const dayIndex = date.getDay();\n  const dayNamesArray = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];\n  return dayNamesArray[dayIndex];\n}\n\n// Format date as dd-MM-yyyy\nfunction formatDate(dateStr) {\n  const date = new Date(dateStr);\n  const day = String(date.getDate()).padStart(2, '0');\n  const month = String(date.getMonth() + 1).padStart(2, '0');\n  return `${day}-${month}`;\n}\n\n// Format time from HH:MM:SS to HH:MM\nfunction formatTime(timeStr) {\n  if (!timeStr) return '';\n  return timeStr.substring(0, 5);\n}\n\n// Generate mobile-friendly cards for each day\nlet dayCards = '';\ndays.forEach(day => {\n  const dayName = getDayName(day.date);\n  const dateFormatted = formatDate(day.date);\n  const startTime = formatTime(day.start_time);\n  const endTime = formatTime(day.end_time);\n  const breakMinutes = day.break_minutes || 0;\n  const workHours = parseFloat(day.total_work_hours || 0).toFixed(1);\n  const notes = day.notes || '';\n  \n  dayCards += `\n    <div style=\"background: #fff; border: 2px solid #f97316; border-radius: 8px; padding: 20px; margin-bottom: 16px;\">\n      <div style=\"display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #fed7aa; padding-bottom: 16px;\">\n        <div>\n          <div style=\"font-weight: bold; color: #f97316; font-size: 18px; margin-bottom: 4px;\">${dayName}</div>\n          <div style=\"color: #6b7280; font-size: 13px;\">${dateFormatted}</div>\n        </div>\n        <div style=\"text-align: right; margin-left: 20px;\">\n          <div style=\"font-size: 28px; font-weight: bold; color: #f97316; line-height: 1;\">${workHours}u</div>\n        </div>\n      </div>\n      \n      <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px;\">\n        <div>\n          <div style=\"color: #6b7280; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;\">⏰ TIJD</div>\n          <div style=\"font-weight: 600; color: #1f2937; font-size: 15px; line-height: 1.4;\">${startTime} - ${endTime}</div>\n        </div>\n        <div>\n          <div style=\"color: #6b7280; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;\">☕ PAUZE</div>\n          <div style=\"font-weight: 600; color: #1f2937; font-size: 15px; line-height: 1.4;\">${breakMinutes}m</div>\n        </div>\n      </div>\n      \n      ${notes ? `<div style=\"background: #fef3c7; padding: 8px 12px; border-radius: 6px; margin-top: 8px;\"><div style=\"color: #92400e; font-size: 12px; font-style: italic;\">📝 ${notes}</div></div>` : ''}\n    </div>\n  `;\n});\n\n// If no entries, show empty message\nif (days.length === 0) {\n  dayCards = `\n    <div style=\"background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px; padding: 40px 20px; text-align: center;\">\n      <div style=\"font-size: 48px; margin-bottom: 12px;\">📭</div>\n      <div style=\"color: #6b7280; font-style: italic;\">Geen uren geregistreerd deze week</div>\n    </div>\n  `;\n}\n\n// Generate complete HTML email with mobile-first design\nconst htmlEmail = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n  <style>\n    * { margin: 0; padding: 0; box-sizing: border-box; }\n    body {\n      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;\n      line-height: 1.6;\n      color: #1f2937;\n      background-color: #f3f4f6;\n      padding: 0;\n      margin: 0;\n    }\n    .container {\n      max-width: 600px;\n      margin: 0 auto;\n      background-color: #ffffff;\n    }\n    .header {\n      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);\n      color: white;\n      padding: 24px 20px;\n      text-align: center;\n    }\n    .header h1 {\n      margin: 0;\n      font-size: 28px;\n      letter-spacing: 2px;\n      font-weight: 800;\n    }\n    .badge {\n      display: inline-block;\n      background: rgba(254, 243, 199, 0.9);\n      color: #92400e;\n      padding: 6px 16px;\n      border-radius: 20px;\n      font-size: 13px;\n      font-weight: 700;\n      margin-top: 12px;\n    }\n    .content {\n      padding: 24px 20px;\n    }\n    .title {\n      color: #f97316;\n      font-size: 20px;\n      font-weight: 700;\n      margin-bottom: 8px;\n    }\n    .subtitle {\n      color: #6b7280;\n      font-size: 14px;\n      margin-bottom: 24px;\n    }\n    .total-box {\n      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);\n      color: white;\n      padding: 20px;\n      border-radius: 12px;\n      text-align: center;\n      margin-top: 20px;\n    }\n    .total-label {\n      font-size: 14px;\n      text-transform: uppercase;\n      letter-spacing: 1px;\n      opacity: 0.9;\n      margin-bottom: 8px;\n    }\n    .total-value {\n      font-size: 36px;\n      font-weight: 800;\n    }\n    .footer {\n      background: #f9fafb;\n      padding: 20px;\n      text-align: center;\n      color: #6b7280;\n      font-size: 13px;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <div style=\"font-size: 40px; margin-bottom: 8px;\">⏱️</div>\n      <h1>TIME // FORGE</h1>\n      <div style=\"font-size: 12px; opacity: 0.9; margin-top: 8px; letter-spacing: 1px;\">INDUSTRIAL HOURS TRACKING</div>\n      <div class=\"badge\">Week ${weekNumber} // ${new Date().getFullYear()}</div>\n    </div>\n    \n    <div class=\"content\">\n      <div class=\"title\">Uren Overzicht Week ${weekNumber}</div>\n      <div class=\"subtitle\">📅 ${startDate} t/m ${endDate}</div>\n      \n      ${dayCards}\n      \n      <div class=\"total-box\">\n        <div class=\"total-label\">Totaal Week</div>\n        <div class=\"total-value\">${parseFloat(totalHours).toFixed(1)}u</div>\n      </div>\n    </div>\n\n    <div class=\"footer\">\n      <div style=\"margin-bottom: 8px;\">🤖 Automatisch gegenereerd rapport</div>\n      <div style=\"font-size: 11px; color: #9ca3af;\">\n        ${new Date().toLocaleString('nl-NL', { dateStyle: 'long', timeStyle: 'short' })}\n      </div>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  weekNumber,\n  startDate,\n  endDate,\n  totalHours: parseFloat(totalHours).toFixed(1),\n  htmlEmail,\n  subject: `⏱️ Week ${weekNumber}: ${parseFloat(totalHours).toFixed(1)}u (${startDate} - ${endDate})`\n};"
+      },
+      "id": "code-1",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "r3mcos3@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "message": "={{ $json.htmlEmail }}",
+        "options": {}
+      },
+      "id": "gmail-1",
+      "name": "Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your-gmail-credential-id",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Email sent successfully\" } }}",
+        "options": {}
+      },
+      "id": "respond-1",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-12-30T14:00:00.000Z",
+  "versionId": "1"
+}
