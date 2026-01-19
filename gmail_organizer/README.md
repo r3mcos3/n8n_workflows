@@ -99,13 +99,7 @@ Edit the prompt in the "Prepare AI Prompt" Code node to:
 - Add rules for certain senders or subjects
 - Change the language of category names
 
-Example: Preferring Dutch category names:
-```javascript
-// In the prompt, change:
-// "create a NEW short category name (1-3 words, English)"
-// to:
-// "create a NEW short category name (1-3 words, Dutch)"
-```
+**Default behavior:** The AI automatically detects the email language and creates labels in that same language. Dutch emails get Dutch labels (e.g., "Webshops", "Bankzaken"), English emails get English labels (e.g., "Shopping", "Banking").
 
 ## Files
 
