@@ -6,10 +6,17 @@
       "name": "Gmail Trigger",
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.3,
-      "position": [-400, 320],
+      "position": [
+        -400,
+        320
+      ],
       "parameters": {
         "pollTimes": {
-          "item": [{"mode": "everyMinute"}]
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
         },
         "filters": {
           "readStatus": "unread"
@@ -21,7 +28,10 @@
       "name": "Get All Labels",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
-      "position": [-180, 320],
+      "position": [
+        -180,
+        320
+      ],
       "parameters": {
         "resource": "label"
       }
@@ -31,9 +41,12 @@
       "name": "Prepare AI Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [40, 320],
+      "position": [
+        40,
+        320
+      ],
       "parameters": {
-        "jsCode": "const email = $('Gmail Trigger').first().json;\nconst allLabels = $('Get All Labels').all().map(item => item.json);\n\n// Get email fields (Gmail uses capitalized field names)\nconst from = email.From || email.from || 'Unknown';\nconst subject = email.Subject || email.subject || 'No subject';\nconst snippet = email.snippet || '';\n\n// Get existing label names (filter out system labels)\nconst existingLabelNames = allLabels\n  .map(l => l.name)\n  .filter(name => !name.startsWith('CATEGORY_') && !name.includes('/') && name !== 'INBOX' && name !== 'SENT' && name !== 'DRAFT' && name !== 'SPAM' && name !== 'TRASH' && name !== 'STARRED' && name !== 'IMPORTANT' && name !== 'UNREAD')\n  .join(', ');\n\nconst prompt = `You are an email categorizer. Categorize this email with a short, descriptive label.\n\nEmail:\n- From: ${from}\n- Subject: ${subject}\n- Preview: ${snippet.substring(0, 300)}\n\nExisting labels in Gmail: ${existingLabelNames || 'None yet'}\n\nInstructions:\n1. If the email fits an existing label, use that EXACT label name\n2. If no existing label fits, create a NEW short category name (1-3 words)\n3. IMPORTANT: Use the same language as the email. Dutch emails get Dutch labels, English emails get English labels.\n4. Be specific - avoid generic labels like \"Other\", \"Overig\", \"Misc\", or \"Te Bekijken\"\n5. Examples of good Dutch categories: Webshops, Reizen, Gezondheid, Overheid, Verzending, Afspraken, Bankzaken, Abonnementen\n6. Examples of good English categories: Shopping, Travel, Health, Government, Shipping, Appointments, Banking, Subscriptions\n\nRespond with ONLY the category name, nothing else.`;\n\nreturn [{\n  json: {\n    messageId: email.id,\n    from: from,\n    subject: subject,\n    snippet: snippet.substring(0, 500),\n    allLabels: allLabels,\n    prompt: prompt\n  }\n}];"
+        "jsCode": "const email = $('Gmail Trigger').first().json;\nconst allLabels = $('Get All Labels').all().map(item => item.json);\n\n// Get email fields (Gmail uses capitalized field names)\nconst from = email.From || email.from || 'Unknown';\nconst subject = email.Subject || email.subject || 'No subject';\nconst snippet = email.snippet || '';\n\n// Get existing label names (filter out system labels)\nconst existingLabelNames = allLabels\n  .map(l => l.name)\n  .filter(name => !name.startsWith('CATEGORY_') && !name.includes('/') && name !== 'INBOX' && name !== 'SENT' && name !== 'DRAFT' && name !== 'SPAM' && name !== 'TRASH' && name !== 'STARRED' && name !== 'IMPORTANT' && name !== 'UNREAD')\n  .join(', ');\n\nconst prompt = `You are an email categorizer. Categorize this email with a short, descriptive label.\n\nEmail:\n- From: ${from}\n- Subject: ${subject}\n- Preview: ${snippet.substring(0, 300)}\n\nExisting labels in Gmail: ${existingLabelNames || 'None yet'}\n\nInstructions:\n1. If the email fits an existing label, use that EXACT label name\n2. If no existing label fits, create a NEW short category name (1-3 words)\n3. IMPORTANT: Use the same language as the email. Dutch emails get Dutch labels, English emails get English labels.\n4. Be specific - avoid generic labels like \"Other\", \"Overig\", \"Misc\", or \"Te Bekijken\"\n5. IMPORTANT: Emails from GitHub (github.com, noreply@github.com) or about code repositories, pull requests, issues, commits, CI/CD must be labeled \"GitHub\" - NOT \"Work\"\n6. Examples of good Dutch categories: Webshops, Reizen, Gezondheid, Overheid, Verzending, Afspraken, Bankzaken, Abonnementen\n7. Examples of good English categories: Shopping, Travel, Health, Government, Shipping, Appointments, Banking, Subscriptions, GitHub\n\nRespond with ONLY the category name, nothing else.`;\n\nreturn [{\n  json: {\n    messageId: email.id,\n    from: from,\n    subject: subject,\n    snippet: snippet.substring(0, 500),\n    allLabels: allLabels,\n    prompt: prompt\n  }\n}];"
       }
     },
     {
@@ -41,7 +54,10 @@
       "name": "AI Categorize",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 2.1,
-      "position": [260, 320],
+      "position": [
+        260,
+        320
+      ],
       "parameters": {
         "resource": "text",
         "operation": "response",
@@ -71,7 +87,10 @@
       "name": "Find or Create Label",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [480, 320],
+      "position": [
+        480,
+        320
+      ],
       "parameters": {
         "jsCode": "const prepData = $('Prepare AI Prompt').first().json;\nconst aiResponse = $('AI Categorize').first().json;\nconst allLabels = prepData.allLabels;\n\n// Extract category from AI response\nlet category = '';\n\ntry {\n  if (typeof aiResponse === 'string') {\n    category = aiResponse;\n  } else if (aiResponse.content) {\n    category = aiResponse.content;\n  } else if (aiResponse.message?.content) {\n    category = aiResponse.message.content;\n  } else if (aiResponse.text) {\n    category = aiResponse.text;\n  } else if (aiResponse.output?.[0]?.content?.[0]?.text) {\n    category = aiResponse.output[0].content[0].text;\n  } else if (aiResponse.choices?.[0]?.message?.content) {\n    category = aiResponse.choices[0].message.content;\n  }\n} catch (e) {\n  console.log('Error parsing AI response:', e);\n}\n\ncategory = String(category).trim();\n\n// Normalize to Title Case\nlet normalizedCategory = category\n  .split(' ')\n  .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())\n  .join(' ');\n\n// Fallback for empty response\nif (!normalizedCategory || normalizedCategory.length === 0) {\n  normalizedCategory = 'Uncategorized';\n}\n\n// Find existing label (case-insensitive)\nconst existingLabel = allLabels.find(l => \n  l.name.toLowerCase() === normalizedCategory.toLowerCase()\n);\n\nreturn [{\n  json: {\n    messageId: prepData.messageId,\n    from: prepData.from,\n    subject: prepData.subject,\n    aiCategory: category,\n    labelName: normalizedCategory,\n    labelId: existingLabel ? existingLabel.id : null,\n    needsCreation: !existingLabel\n  }\n}];"
       }
@@ -81,7 +100,10 @@
       "name": "Label Exists?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [700, 320],
+      "position": [
+        700,
+        320
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -110,7 +132,10 @@
       "name": "Create Label",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
-      "position": [920, 480],
+      "position": [
+        920,
+        480
+      ],
       "parameters": {
         "resource": "label",
         "operation": "create",
@@ -122,7 +147,10 @@
       "name": "Use Created Label",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1140, 480],
+      "position": [
+        1140,
+        480
+      ],
       "parameters": {
         "jsCode": "const originalData = $('Find or Create Label').first().json;\nconst createdLabel = $('Create Label').first().json;\n\nreturn [{\n  json: {\n    messageId: originalData.messageId,\n    labelId: createdLabel.id,\n    labelName: originalData.labelName\n  }\n}];"
       }
@@ -132,7 +160,10 @@
       "name": "Use Existing Label",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [920, 160],
+      "position": [
+        920,
+        160
+      ],
       "parameters": {
         "jsCode": "const originalData = $('Find or Create Label').first().json;\n\nreturn [{\n  json: {\n    messageId: originalData.messageId,\n    labelId: originalData.labelId,\n    labelName: originalData.labelName\n  }\n}];"
       }
@@ -142,44 +173,125 @@
       "name": "Add Label to Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
-      "position": [1360, 320],
+      "position": [
+        1360,
+        320
+      ],
       "parameters": {
         "operation": "addLabels",
         "messageId": "={{ $json.messageId }}",
-        "labelIds": ["={{ $json.labelId }}"]
+        "labelIds": [
+          "={{ $json.labelId }}"
+        ]
       }
     }
   ],
   "connections": {
     "Gmail Trigger": {
-      "main": [[{"node": "Get All Labels", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Get All Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get All Labels": {
-      "main": [[{"node": "Prepare AI Prompt", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Prepare AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare AI Prompt": {
-      "main": [[{"node": "AI Categorize", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "AI Categorize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "AI Categorize": {
-      "main": [[{"node": "Find or Create Label", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Find or Create Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Find or Create Label": {
-      "main": [[{"node": "Label Exists?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Label Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Label Exists?": {
       "main": [
-        [{"node": "Use Existing Label", "type": "main", "index": 0}],
-        [{"node": "Create Label", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Use Existing Label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Create Label": {
-      "main": [[{"node": "Use Created Label", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Use Created Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Use Created Label": {
-      "main": [[{"node": "Add Label to Email", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Add Label to Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Use Existing Label": {
-      "main": [[{"node": "Add Label to Email", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Add Label to Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
